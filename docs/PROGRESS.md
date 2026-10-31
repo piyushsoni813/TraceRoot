@@ -44,6 +44,12 @@ results, limitations) for human review. No automatic merge or deploy.
    - Hard limit is the total of 40. Verify calls are reserved, so no patch ships untested.
    - Tools: read_file, search, run_tests, run_cmd, git, apply_edit.
 
+## Agent build status
+- Step 1 done: Docker image `traceroot-sandbox:1` (`tools/sandbox/`). Python 3.13.7, pinned deps, git, non-root user.
+  Run with `--network none`, workspace mounted at `/work`, `PYTHONPATH=/work/src:/work`, pytest `-W ignore::DeprecationWarning`.
+  On Windows Git Bash set `MSYS_NO_PATHCONV=1`. Checked on flask-5160: git works, no network, reproducer exits 1 at the faulty revision.
+- Next: step 2, sandbox repo builder (fresh clone, remove fix commit/tags/branches/reflogs).
+
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.
 - The investigator agent, sandbox, hypothesis tracking and the auditable report are not built.
