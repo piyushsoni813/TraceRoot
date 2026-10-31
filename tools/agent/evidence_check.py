@@ -7,8 +7,9 @@ evidence_check.json. Every item is verified, unverifiable (the transcript cannot
 contradicted (the transcript says the opposite). A run passes only with no contradicted and no
 unverifiable items. What is checked:
   hypothesis_call  each cited call exists, came before the update, is an evidence tool and did not return an error
-  verification     the call is a run_tests/run_python after the last edit, matches the command, and the claimed
-                   counts and pass/fail agree with the real output
+  verification     the call is a run_tests/run_python after the last edit, a run_tests command names the tests
+                   that ran, and the claimed counts and pass/fail agree with the real output (for run_python the
+                   command text is only a label; the call number ties it to the transcript)
   line_citation    "path.py:NN" / "path.py, line NN" was actually shown to the agent (read_file, search, blame, traceback)
   commit           every commit hash in the report appears in a git tool output or the bug report
   quote            inline `code` of 12+ chars appears in something the agent saw or wrote
@@ -16,13 +17,14 @@ unverifiable items. What is checked:
   patch            report edits equal the successful apply_edit calls and the saved diff
 It cannot judge whether an argument is sound. That is for the human reviewer.
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys
 
 EVIDENCE_TOOLS = {"read_file", "search", "git_log", "git_show", "git_blame", "run_python", "run_tests", "list_dir"}
 COUNT_WORDS = re.compile(r"(\d+)\s+(passed|failed|errors?|skipped|xfailed|xpassed)")
 HASH = re.compile(r"\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b")
 LINE_CITES = [re.compile(r"([\w./\\-]+\.py):(\d+)"), re.compile(r"([\w./\\-]+\.py)[ ,(]+lines? (\d+)")]
-SPAN = re.compile(r"`([^`\n]{12,})`")
+SPAN = re.compile(r"`([^`\n]*)`")
+MIN_QUOTE = 12
 
 
 def norm_path(p):
@@ -128,9 +130,6 @@ def check(run_dir):
             if not all(str(s) in cmd for s in sel):
                 add("verification", "unverifiable", "command does not name the tests that were run", ref)
                 continue
-        elif ws(a.get("code", ""))[:30] not in cmd:
-            add("verification", "unverifiable", "command does not match the script that was run", ref)
-            continue
         m = re.match(r"\[exit (-?\d+)\]", out)
         code = int(m.group(1)) if m else None
         claim = v["result"].lower()
@@ -156,7 +155,7 @@ def check(run_dir):
                 hit = (p, int(line)) in seen
                 add("line_citation", "verified" if hit else "unverifiable",
                     f"{p}:{line} " + ("was shown to the agent" if hit else "was never shown to the agent"), where)
-        for span in SPAN.findall(text):
+        for span in (x for x in SPAN.findall(text) if len(x) >= MIN_QUOTE):
             hit = ws(span) in seen_text
             add("quote", "verified" if hit else "unverifiable", f"`{span[:60]}` " + ("appears in the transcript" if hit else "appears nowhere in the transcript"), where)
     git_text = " ".join((e.get("result") or "") for e in calls.values() if e["name"] in ("git_log", "git_show", "git_blame")).lower() \
@@ -181,7 +180,9 @@ def check(run_dir):
         "report diff equals the saved workspace diff" if report["patch"]["diff"] == saved else "report diff differs from workspace.patch", "patch.diff")
 
     counts = {s: sum(1 for i in items if i["status"] == s) for s in ("verified", "unverifiable", "contradicted")}
-    out = {"passed": counts["unverifiable"] == 0 and counts["contradicted"] == 0 and len(items) > 0, "counts": counts,
+    commit = subprocess.run(["git", "-C", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                             "log", "-1", "--format=%h", "--", "tools/agent/evidence_check.py"], capture_output=True, text=True).stdout.strip()
+    out = {"checker_commit": commit, "passed": counts["unverifiable"] == 0 and counts["contradicted"] == 0 and len(items) > 0, "counts": counts,
            "total": len(items), "verified_fraction": round(counts["verified"] / len(items), 3) if items else 0.0, "items": items}
     json.dump(out, open(f"{run_dir}/evidence_check.json", "w", encoding="utf-8"), indent=2)
     return out

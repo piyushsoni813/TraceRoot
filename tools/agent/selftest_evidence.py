@@ -110,6 +110,13 @@ r = run("honestfail", lambda d: (d["calls"][9].update(result="[exit 1]\n1 failed
 check("honestly reporting a failure is verified", has(r, "verification", "verified"), r["items"])
 r = run("othertests", lambda d: d["report"]["verification"][0].update(command="pytest tests/other.py"))
 check("command naming other tests is unverifiable", has(r, "verification", "unverifiable", "does not name"))
+r = run("twospans", lambda d: d["report"]["root_cause"].update(mechanism="The `foo` call and the `bar` call disagree, which breaks `return x + 1` here."))
+check("text between two short spans is not taken as a quote", not any(i["kind"] == "quote" and "call and the" in i["detail"] for i in r["items"]), r["items"])
+check("a real long span next to short ones is still checked", has(r, "quote", "verified", "return x + 1"))
+r = run("python-label", lambda d: (d["calls"][9].update(name="run_python", args={"code": "import pkg; assert pkg.mod.foo(1) == 3"}, result="[exit 0]\n"),
+                                   d["report"]["verification"][0].update(command="ran the reproducer", result="exit 0, no error")))
+check("a run_python verification is not judged by its command label", has(r, "verification", "verified"), r["items"])
+check("the checker commit is recorded", "checker_commit" in r)
 r = run("python-ok", lambda d: (d["calls"][9].update(name="run_python", args={"code": "print('ok check')"}, result="[exit 0]\nok check\n"),
                                 d["report"]["verification"][0].update(command="python -c \"print('ok check')\"", result="printed ok check")))
 check("run_python verification matched by its code", has(r, "verification", "verified"), r["items"])
