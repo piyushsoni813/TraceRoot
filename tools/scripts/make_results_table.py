@@ -38,6 +38,10 @@ def why(d, res):
         return "stopped: API error"
     if res["outcome"] == "no_submission":
         return "no submit (stopped calling tools)"
+    if res["outcome"] == "time_exhausted":
+        return "no submit (15 active minutes used)"
+    if res["outcome"] == "model_returned_nothing":
+        return "stopped: empty or malformed model reply"
     return res["outcome"]
 
 
@@ -95,9 +99,12 @@ Reruns and exclusions (every attempt is kept in `experiments/`; the table shows 
 - Gemini 3.8 Live `a` and `b` failed because of harness bugs in the Live client (an empty turn-closing message was read as an
   empty answer, so the agent was nudged out after about 4 calls). Fixed in c21045a and f44b893, then `c` ran.
 - Gemini 3.1 Flash Lite `a` lost filelock, packaging and attrs to HTTP 503 (Google "high demand") before 503 patience was added;
-  `b` reran those three. attrs `b` again stopped on 503 after 12 retries.
+  `b` reran those three. attrs `b` again stopped on 503 after 12 retries; `c` reran attrs and solved it.
 - Flash chain `a` lost every case to HTTP 503 or to a harness bug (missing thought signature after a model switch). `b` reran with
-  the fixes; it stopped at attrs when the last model's daily quota ended. click and flask wait for the next quota reset.
+  the fixes on the first key and stopped at attrs when the last model's daily quota ended. click `b`, flask `b` and attrs `c` then
+  ran on a second key (`run.json` records `key_env`). click `b` used up the 15 active minutes in 10 calls (Gemini 3.8 Flash took
+  90 to 185 s per reply). attrs `c` ended when Gemini 2.5 Flash returned `MALFORMED_FUNCTION_CALL`; the loop treats an empty reply
+  as the end of the run instead of nudging, a harness weakness to fix in the next protocol version.
 - Gemini 3.8 Live Extended Thinking was dropped: it answered in speech and made no tool calls (all five `a` runs).
 - The very first run (filelock, Gemini 3.5 Flash) stopped on the 20 request daily quota after 22 calls, before any edit.
 

@@ -1,0 +1,115 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 12,
+    "unverifiable": 5,
+    "contradicted": 0
+  },
+  "total": 17,
+  "verified_fraction": 0.706,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 4 is run_python with output",
+      "ref": "H1 -> call 4"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 9 is run_python with output",
+      "ref": "H1 -> call 9"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 15 is run_python with output",
+      "ref": "H1 -> call 15"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 16 is run_python with output",
+      "ref": "H1 -> call 16"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 15 is run_python with output",
+      "ref": "H2 -> call 15"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 16 is run_python with output",
+      "ref": "H2 -> call 16"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "call 4 ran before the last edit (call 20)",
+      "ref": "verification[0] -> call 16"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 21 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 4"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "command does not name the tests that were run",
+      "ref": "verification[2] -> call 21"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`pkgutil.get_loader(name)` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`importlib.util.find_spec(name)` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`pkgutil.get_loader` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "84e11a1e appears in a git output",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0 appears in a git output",
+      "ref": "root_cause.breaking_commit"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "unverifiable",
+      "detail": "src/flask/helpers.py, src/flask/scaffold.py was never opened or found by a search",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

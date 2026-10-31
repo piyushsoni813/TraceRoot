@@ -1,0 +1,132 @@
+{
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-flash,gemini-3-flash-preview,gemini-2.5-flash",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 30,
+    "seconds": 800.2,
+    "total_tokens": 180848
+  },
+  "root_cause": {
+    "file": "src/flask/helpers.py, src/flask/scaffold.py",
+    "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0",
+    "function": "get_root_path, _find_package_path",
+    "mechanism": "The replacement of `pkgutil.get_loader(name)` with `importlib.util.find_spec(name)` introduced a regression because `find_spec` raises `ValueError` if the module exists in `sys.modules` but has its `__spec__` attribute set to `None`. This happens for the `__main__` module when running a script directly. The previous `pkgutil.get_loader` implementation handled this gracefully."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "Commit 84e11a1e replaced pkgutil.get_loader with importlib.util.find_spec without handling ValueError (such as when sys.modules[name].__spec__ is None or invalid name), causing unhandled exceptions in get_root_path and _find_package_path.",
+      "predicts": "Catching (ImportError, ValueError) around importlib.util.find_spec in helpers.py and scaffold.py (where pkgutil.get_loader was replaced) will allow find_spec to gracefully return None/catch the error, making Flask(\"__main__\") and direct script execution succeed.",
+      "status": "supported",
+      "evidence": "find_spec raises ValueError when a module exists in sys.modules but has __spec__=None. This is the case for __main__ when run as a script. The previous code used pkgutil.get_loader which didn't have this behavior.",
+      "calls": [
+        4,
+        9,
+        15,
+        16
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The bug is caused specifically by __main__ missing __spec__ when run as a script, so find_spec should only be avoided when import_name == '__main__'.",
+      "predicts": "Bypassing find_spec exclusively when root_mod_name == '__main__' is sufficient and other modules never trigger find_spec failure in sys.modules.",
+      "status": "rejected",
+      "evidence": "Any module in sys.modules with __spec__=None will trigger this, not just __main__.",
+      "calls": [
+        15,
+        16
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 4,
+      "tool": "run_python",
+      "args": {
+        "code": "from flask import Flask\napp = Flask(\"__main__\")\nprint(app.instance_path)\n"
+      },
+      "excerpt": "[exit 1]\nTraceback (most recent call last):\n  File \"<string>\", line 2, in <module>\n    app = Flask(\"__main__\")\n  File \"/work/src/flask/app.py\", line 367, in __init__\n    super().__init__(\n    ~~~~~~~~~~~~~~~~^\n        import_name=import_name,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n        root_path=root_path,\n        ^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/work/src/flask/scaffold.p"
+    },
+    {
+      "call": 9,
+      "tool": "run_python",
+      "args": {
+        "code": "import importlib.util, sys\nprint(\"sys.modules['__main__']:\", sys.modules.get(\"__main__\"))\nprint(\"__spec__:\", getattr(sys.modules.get(\"__main__\"), \"__spec__\", None))\ntry:\n    importlib.util.find_spec(\"__main__\")\nexcept Exception as e:\n    print(\"find_spec('__main__') raised:\", type(e), e)\n"
+      },
+      "excerpt": "[exit 0]\nsys.modules['__main__']: <module '__main__' (<class '_frozen_importlib.BuiltinImporter'>)>\n__spec__: None\nfind_spec('__main__') raised: <class 'ValueError'> __main__.__spec__ is None\n"
+    },
+    {
+      "call": 15,
+      "tool": "run_python",
+      "args": {
+        "code": "import importlib.util\ntry:\n    importlib.util.find_spec(\".relative\")\nexcept Exception as e:\n    print(f\"find_spec('.relative') raised: {type(e)} {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nfind_spec('.relative') raised: <class 'ImportError'> no package specified for '.relative' (required for relative module names)\n"
+    },
+    {
+      "call": 16,
+      "tool": "run_python",
+      "args": {
+        "code": "import importlib.util, sys\nfrom types import ModuleType\nm = ModuleType(\"bad_mod\")\nm.__spec__ = None\nsys.modules[\"bad_mod\"] = m\ntry:\n    importlib.util.find_spec(\"bad_mod\")\nexcept Exception as e:\n    print(f\"find_spec('bad_mod') raised: {type(e)} {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nfind_spec('bad_mod') raised: <class 'ValueError'> bad_mod.__spec__ is None\n"
+    },
+    {
+      "call": 21,
+      "tool": "run_python",
+      "args": {
+        "code": "from flask import Flask\nimport os\napp = Flask(\"__main__\")\nprint(f\"Instance path: {app.instance_path}\")\nassert app.instance_path == os.path.join(os.getcwd(), \"instance\")\n"
+      },
+      "excerpt": "[exit 0]\nInstance path: /work/instance\n"
+    },
+    {
+      "call": 24,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_basic.py",
+          "tests/test_helpers.py",
+          "tests/test_instance_config.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [ 42%]\n........................................................................ [ 85%]\n........................                                                 [100%]\n168 passed in 1.92s\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/flask/helpers.py",
+        "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None\n",
+        "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None\n"
+      },
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None\n",
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None\n"
+      }
+    ],
+    "diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..44fee353 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,11 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except (ImportError, ValueError):\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..d5b96b0b 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,11 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except (ImportError, ValueError):\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "verification": [
+    {
+      "result": "ValueError: __main__.__spec__ is None",
+      "command": "run_python (reproduction script)",
+      "call": 4
+    },
+    {
+      "call": 21,
+      "result": "Instance path: /work/instance (Success)",
+      "command": "run_python (verification script)"
+    },
+    {
+      "command": "run_tests (relevant tests)",
+      "call": 24,
+      "result": "168 passed (Success)"
+    }
+  ],
+  "limitations": [
+    "The test suite has some pre-existing failures in `tests/test_cli.py` due to an apparent incompatibility with the installed version of `click` (CliRunner does not accept `mix_stderr`). These failures are unrelated to the reported bug and my fix."
+  ],
+  "decision": "ready for human review"
+}

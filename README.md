@@ -161,9 +161,9 @@ Evidence = items in the report backed by the transcript / all items checked (`to
 | --- | --- | --- | --- | --- | --- | --- |
 | Gemini 3.1 Flash Live (preview) | **success**, root cause likely, evidence 14/16 | **success**, root cause partial, evidence 12/16 | no submit (40 calls used) | **success**, root cause partial, evidence 19/21 | **success**, root cause match, evidence 10/13 | 4/5 |
 | Gemini 3.5 Flash Lite | no submit (40 calls used) | **success**, root cause partial, evidence 7/11 | **success**, root cause likely, evidence 4/6 | no submit (40 calls used) | **success**, root cause miss, evidence 7/10 | 3/5 |
-| Gemini 3.1 Flash Lite | no submit (40 calls used) (b) | **success** (b), root cause partial, evidence 9/9 | stopped: HTTP 503 (busy) (b) | no submit (40 calls used) | **success**, root cause likely, evidence 19/20 | 2/5 |
+| Gemini 3.1 Flash Lite | no submit (40 calls used) (b) | **success** (b), root cause partial, evidence 9/9 | **success** (c), root cause likely, evidence 12/14 | no submit (40 calls used) | **success**, root cause likely, evidence 19/20 | 3/5 |
 | Gemini 3.8 Live | no submit (40 calls used) (c) | **success** (c), root cause partial, evidence 11/11 | no submit (40 calls used) (c) | no submit (40 calls used) (c) | **success** (c), root cause match, evidence 8/10 | 2/5 |
-| Flash chain (3.8 Flash, 3 Flash, 2.5 Flash) | **success** (b), root cause likely, evidence 10/13 | **success** (b), root cause partial, evidence 17/17 | stopped: daily quota (b) | stopped: harness bug (signature) | stopped: harness bug (signature) | 2/5 |
+| Flash chain (3.8 Flash, 3 Flash, 2.5 Flash) | **success** (b), root cause likely, evidence 10/13 | **success** (b), root cause partial, evidence 17/17 | stopped: empty or malformed model reply (c) | no submit (15 active minutes used) (b) | **success** (b), root cause match, evidence 12/17 | 3/5 |
 
 Cases solved by at least one driver: 5 of 5. Baseline for comparison (single prompt, edit format): Gemini 3.5 Flash 4 of 9 runs.
 
@@ -171,9 +171,12 @@ Reruns and exclusions (every attempt is kept in `experiments/`; the table shows 
 - Gemini 3.8 Live `a` and `b` failed because of harness bugs in the Live client (an empty turn-closing message was read as an
   empty answer, so the agent was nudged out after about 4 calls). Fixed in c21045a and f44b893, then `c` ran.
 - Gemini 3.1 Flash Lite `a` lost filelock, packaging and attrs to HTTP 503 (Google "high demand") before 503 patience was added;
-  `b` reran those three. attrs `b` again stopped on 503 after 12 retries.
+  `b` reran those three. attrs `b` again stopped on 503 after 12 retries; `c` reran attrs and solved it.
 - Flash chain `a` lost every case to HTTP 503 or to a harness bug (missing thought signature after a model switch). `b` reran with
-  the fixes; it stopped at attrs when the last model's daily quota ended. click and flask wait for the next quota reset.
+  the fixes on the first key and stopped at attrs when the last model's daily quota ended. click `b`, flask `b` and attrs `c` then
+  ran on a second key (`run.json` records `key_env`). click `b` used up the 15 active minutes in 10 calls (Gemini 3.8 Flash took
+  90 to 185 s per reply). attrs `c` ended when Gemini 2.5 Flash returned `MALFORMED_FUNCTION_CALL`; the loop treats an empty reply
+  as the end of the run instead of nudging, a harness weakness to fix in the next protocol version.
 - Gemini 3.8 Live Extended Thinking was dropped: it answered in speech and made no tool calls (all five `a` runs).
 - The very first run (filelock, Gemini 3.5 Flash) stopped on the 20 request daily quota after 22 calls, before any edit.
 

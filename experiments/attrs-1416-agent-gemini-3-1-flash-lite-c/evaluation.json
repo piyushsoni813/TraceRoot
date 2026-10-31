@@ -1,0 +1,136 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "attrs-1416",
+  "model": "gemini-3.1-flash-lite",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "14 passed, 2 warnings in 0.04s"
+    ],
+    "applied_diff": "diff --git a/src/attr/_make.py b/src/attr/_make.py\nindex 7439dc2..41bc412 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -448,7 +448,7 @@ def _transform_attrs(\n     attrs = base_attrs + own_attrs\n \n     if field_transformer is not None:\n-        attrs = field_transformer(cls, attrs)\n+        attrs = list(field_transformer(cls, attrs))\n \n     # Check attr order after executing the field_transformer.\n     # Mandatory vs non-mandatory attr order only matters when they are part of\n"
+  },
+  "root_cause": {
+    "status": "likely",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/attr/_make.py"
+    ],
+    "claimed": {
+      "file": "src/attr/_make.py",
+      "function": "_transform_attrs",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 12,
+      "unverifiable": 2,
+      "contradicted": 0
+    },
+    "total": 14,
+    "verified_fraction": 0.857,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 33 is apply_edit, which produces no evidence",
+        "ref": "H1 -> call 33"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 34 is run_python with output",
+        "ref": "H1 -> call 34"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 33 is apply_edit, which produces no evidence",
+        "ref": "H2 -> call 33"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 34 is run_python with output",
+        "ref": "H2 -> call 34"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 34 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 34"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 35 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 34"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_ClassBuilder` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_ClassBuilder` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_ClassBuilder` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_transform_attrs` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`src/attr/_make.py` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/attr/_make.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 38,
+    "model_calls": 38,
+    "total_tokens": 556070,
+    "seconds": 1094.5,
+    "active_seconds": 412.9,
+    "waited_seconds": 681.6,
+    "models_used": {
+      "gemini-3.1-flash-lite": 38
+    }
+  }
+}

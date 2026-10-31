@@ -1,0 +1,73 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/helpers.py",
+      "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None\n",
+      "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None\n"
+    },
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None\n",
+      "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None\n"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "file": "src/flask/helpers.py, src/flask/scaffold.py",
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0",
+      "function": "get_root_path, _find_package_path",
+      "mechanism": "The replacement of `pkgutil.get_loader(name)` with `importlib.util.find_spec(name)` introduced a regression because `find_spec` raises `ValueError` if the module exists in `sys.modules` but has its `__spec__` attribute set to `None`. This happens for the `__main__` module when running a script directly. The previous `pkgutil.get_loader` implementation handled this gracefully."
+    },
+    "limitations": [
+      "The test suite has some pre-existing failures in `tests/test_cli.py` due to an apparent incompatibility with the installed version of `click` (CliRunner does not accept `mix_stderr`). These failures are unrelated to the reported bug and my fix."
+    ],
+    "verification": [
+      {
+        "result": "ValueError: __main__.__spec__ is None",
+        "command": "run_python (reproduction script)",
+        "call": 4
+      },
+      {
+        "call": 21,
+        "result": "Instance path: /work/instance (Success)",
+        "command": "run_python (verification script)"
+      },
+      {
+        "command": "run_tests (relevant tests)",
+        "call": 24,
+        "result": "168 passed (Success)"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "Commit 84e11a1e replaced pkgutil.get_loader with importlib.util.find_spec without handling ValueError (such as when sys.modules[name].__spec__ is None or invalid name), causing unhandled exceptions in get_root_path and _find_package_path.",
+      "predicts": "Catching (ImportError, ValueError) around importlib.util.find_spec in helpers.py and scaffold.py (where pkgutil.get_loader was replaced) will allow find_spec to gracefully return None/catch the error, making Flask(\"__main__\") and direct script execution succeed.",
+      "status": "supported",
+      "evidence": "find_spec raises ValueError when a module exists in sys.modules but has __spec__=None. This is the case for __main__ when run as a script. The previous code used pkgutil.get_loader which didn't have this behavior.",
+      "calls": [
+        4,
+        9,
+        15,
+        16
+      ],
+      "recorded_at_call": 10,
+      "updated_at_call": 17
+    },
+    {
+      "id": "H2",
+      "text": "The bug is caused specifically by __main__ missing __spec__ when run as a script, so find_spec should only be avoided when import_name == '__main__'.",
+      "predicts": "Bypassing find_spec exclusively when root_mod_name == '__main__' is sufficient and other modules never trigger find_spec failure in sys.modules.",
+      "status": "rejected",
+      "evidence": "Any module in sys.modules with __spec__=None will trigger this, not just __main__.",
+      "calls": [
+        15,
+        16
+      ],
+      "recorded_at_call": 11,
+      "updated_at_call": 18
+    }
+  ],
+  "decision": "ready for human review"
+}

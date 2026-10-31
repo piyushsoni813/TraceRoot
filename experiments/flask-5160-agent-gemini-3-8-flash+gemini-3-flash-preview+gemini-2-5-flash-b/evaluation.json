@@ -1,0 +1,156 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-flash,gemini-3-flash-preview,gemini-2.5-flash",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "41 passed in 0.42s"
+    ],
+    "applied_diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..44fee353 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,11 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except (ImportError, ValueError):\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..d5b96b0b 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,11 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except (ImportError, ValueError):\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "root_cause": {
+    "status": "match",
+    "commit_match": true,
+    "file_match": false,
+    "function_match": false,
+    "fix_files": [
+      "src/flask/helpers.py",
+      "src/flask/scaffold.py"
+    ],
+    "claimed": {
+      "file": "src/flask/helpers.py, src/flask/scaffold.py",
+      "function": "get_root_path, _find_package_path",
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+    },
+    "needs_human_review": false
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 12,
+      "unverifiable": 5,
+      "contradicted": 0
+    },
+    "total": 17,
+    "verified_fraction": 0.706,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 4 is run_python with output",
+        "ref": "H1 -> call 4"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 9 is run_python with output",
+        "ref": "H1 -> call 9"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 15 is run_python with output",
+        "ref": "H1 -> call 15"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 16 is run_python with output",
+        "ref": "H1 -> call 16"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 15 is run_python with output",
+        "ref": "H2 -> call 15"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 16 is run_python with output",
+        "ref": "H2 -> call 16"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "call 4 ran before the last edit (call 20)",
+        "ref": "verification[0] -> call 16"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 21 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 4"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "command does not name the tests that were run",
+        "ref": "verification[2] -> call 21"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`pkgutil.get_loader(name)` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`importlib.util.find_spec(name)` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`pkgutil.get_loader` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "84e11a1e appears in a git output",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0 appears in a git output",
+        "ref": "root_cause.breaking_commit"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "unverifiable",
+        "detail": "src/flask/helpers.py, src/flask/scaffold.py was never opened or found by a search",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 30,
+    "model_calls": 25,
+    "total_tokens": 180848,
+    "seconds": 800.2,
+    "active_seconds": 659.1,
+    "waited_seconds": 141.1,
+    "models_used": {
+      "gemini-3.8-flash": 7,
+      "gemini-3-flash-preview": 18
+    }
+  }
+}
