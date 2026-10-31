@@ -160,7 +160,7 @@ Evidence = items in the report backed by the transcript / all items checked (`to
 | Driver | filelock-346 | packaging-638 | attrs-1416 | click-3449 | flask-5160 | Solved |
 | --- | --- | --- | --- | --- | --- | --- |
 | Gemini 3.1 Flash Live (preview) | **success**, root cause likely, evidence 14/16 | **success**, root cause partial, evidence 12/16 | no submit (40 calls used) | **success**, root cause partial, evidence 19/21 | **success**, root cause match, evidence 10/13 | 4/5 |
-| Gemini 3.5 Flash Lite | no submit (40 calls used) | **success**, root cause partial, evidence 7/11 | **success**, root cause likely, evidence 4/6 | no submit (40 calls used) | **success**, root cause miss, evidence 7/10 | 3/5 |
+| Gemini 3.5 Flash Lite | no submit (40 calls used) | **success**, root cause partial, evidence 7/11 | **success**, root cause likely, evidence 4/6 | no submit (40 calls used) | **success**, root cause likely, evidence 7/10 | 3/5 |
 | Gemini 3.1 Flash Lite | no submit (40 calls used) (b) | **success** (b), root cause partial, evidence 9/9 | **success** (c), root cause likely, evidence 12/14 | no submit (40 calls used) | **success**, root cause likely, evidence 19/20 | 3/5 |
 | Gemini 3.8 Live | no submit (40 calls used) (c) | **success** (c), root cause partial, evidence 11/11 | no submit (40 calls used) (c) | no submit (40 calls used) (c) | **success** (c), root cause match, evidence 8/10 | 2/5 |
 | Flash chain (3.8 Flash, 3 Flash, 2.5 Flash) | **success** (b), root cause likely, evidence 10/13 | **success** (b), root cause partial, evidence 17/17 | stopped: empty or malformed model reply (c) | no submit (15 active minutes used) (b) | **success** (b), root cause match, evidence 12/17 | 3/5 |

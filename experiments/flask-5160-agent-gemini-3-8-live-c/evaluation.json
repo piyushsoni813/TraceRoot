@@ -6,7 +6,7 @@
     "outcome": "success",
     "reproduce_exit_code": 0,
     "pytest_tail": [
-      "41 passed in 0.40s"
+      "41 passed in 0.39s"
     ],
     "applied_diff": "diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..d080515f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -854,11 +854,14 @@ def _find_package_path(import_name):\n         else:\n             return os.path.dirname(root_spec.origin)\n \n+    if root_mod_name == \"__main__\":\n+        return os.getcwd()\n+\n     # we were unable to find the `package_path` using PEP 451 loaders\n     spec = importlib.util.find_spec(root_mod_name)\n     loader = spec.loader if spec is not None else None\n \n-    if loader is None or root_mod_name == \"__main__\":\n+    if loader is None:\n         # import name is not found, or interactive/main module\n         return os.getcwd()\n \n"
   },

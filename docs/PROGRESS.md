@@ -131,6 +131,12 @@ results, limitations) for human review. No automatic merge or deploy.
 - Fixed after round 1: an empty reply with finishReason MALFORMED_FUNCTION_CALL (or UNEXPECTED_TOOL_CALL) used to end the run
   (`model_returned_nothing`). It is now nudged with the reason, within the same 3-nudge limit, and the REST client merges
   neighbouring same-role turns. Round 1 runs were made before this change; runs after it record the newer `code_commit`.
+- Root cause review (2026-10-31): `docs/root-cause-review.md` (generated) has the real fix next to each of the 15 successful runs.
+  AI pre-review in `docs/root-cause-review-ai.json`: 10 correct, 5 partly, 0 wrong (filelock x2 and packaging chain name the wrong
+  breaking commit; attrs 3.5 Flash Lite muddled; flask 3.1 Flash Lite covers only scaffold.py). Human verdicts still pending.
+- Scorer fix: root cause fields listing several files or functions ("a.py and b.py", "f, g") are now split before matching;
+  re-scoring changed only flask 3.5 Flash Lite from miss to likely.
+- Evidence checker limit seen in review: it verifies that a cited commit appears in a git output, not that what is said about it is true.
 - Parked for later: discussion of a multi-agent design (planner, reviewer) on top of the single investigator agent.
 - Next, in order: (2) root cause review sheet for a person to confirm likely/partial, (3) analyse where the 40 calls go in
   budget_exhausted runs, (4) test improvements as protocol v2 against frozen v1, (5) new cases fixed after model training cutoffs. (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt

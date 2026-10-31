@@ -88,9 +88,12 @@ def score_root_cause(info, rc):
     real = info["breaking"].lower()
     commit_match = len(claimed_commit) >= 7 and (real.startswith(claimed_commit) or claimed_commit.startswith(real))
     claimed_file = (rc.get("file") or "").strip().replace("\\", "/")
-    file_match = claimed_file in fix_files
-    fn = re.split(r"[.:]", (rc.get("function") or "").strip())[-1]
-    function_match = bool(fn) and re.search(r"\b" + re.escape(fn) + r"\b", diff) is not None
+    # a report may name several files or functions: "a.py, b.py", "a.py and b.py", "f; g"
+    claimed_files = [p.strip("`'\" ") for p in re.split(r",|;|\band\b|\s+", claimed_file) if p.strip("`'\" ").endswith(".py")]
+    file_match = any(p in fix_files for p in claimed_files)
+    names = [n.strip("`'\"() ") for n in re.split(r",|;|\band\b|\s+", (rc.get("function") or "").strip())]
+    fns = [re.split(r"[.:]", n)[-1] for n in names if n.strip("`'\"() ")]
+    function_match = any(fn and re.search(r"\b" + re.escape(fn) + r"\b", diff) for fn in fns)
     if commit_match:
         status = "match"
     elif file_match and function_match:

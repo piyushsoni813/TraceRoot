@@ -56,7 +56,9 @@ for case in cases:
     ev = score.score(make_run(case, f"{case}-good", edits, {"file": edits[0]["path"], "function": fn, "breaking_commit": info["breaking"][:10]}))
     check("real fix scores success", ev["repair"]["outcome"] == "success", ev["repair"])
     check("root cause matched by commit", ev["root_cause"]["status"] == "match" and ev["root_cause"]["commit_match"], ev["root_cause"])
-    check("cost is carried over", ev["cost"] == {"tool_calls": 7, "model_calls": 7, "total_tokens": 1234, "seconds": 9.5}, ev["cost"])
+    check("cost is carried over", {k: ev["cost"][k] for k in ("tool_calls", "model_calls", "total_tokens", "seconds")}
+          == {"tool_calls": 7, "model_calls": 7, "total_tokens": 1234, "seconds": 9.5}
+          and set(ev["cost"]) >= {"active_seconds", "waited_seconds", "models_used"}, ev["cost"])
     check("evidence is null without an evidence check", ev["evidence"] is None)
     d_ev = make_run(case, f"{case}-ev", edits)
     json.dump({"passed": True, "counts": {"verified": 3, "unverifiable": 0, "contradicted": 0}}, open(f"{d_ev}/evidence_check.json", "w"))
@@ -77,6 +79,13 @@ for case in cases:
     check("nothing matching is a miss", rc["status"] == "miss" and not rc["needs_human_review"], rc)
     rc = score.score_root_cause(info, {"file": "x", "function": "y", "breaking_commit": info["breaking"][:5]})
     check("short commit prefix does not count", not rc["commit_match"], rc)
+    # several files or functions in one field
+    if diff_fn:
+        for joined in (f"src/other/thing.py and {edits[0]['path']}", f"src/other/thing.py, `{edits[0]['path']}`"):
+            rc = score.score_root_cause(info, {"file": joined, "function": f"zzz_nope and Cls.{diff_fn}", "breaking_commit": ""})
+            check(f"a list of files and functions is matched ({joined[:22]}...)", rc["file_match"] and rc["function_match"] and rc["status"] == "likely", rc)
+    rc = score.score_root_cause(info, {"file": "src/other/a.py and src/other/b.py", "function": "zzz_a, zzz_b", "breaking_commit": ""})
+    check("a list with no right entry is still a miss", rc["status"] == "miss", rc)
 
     # failing submissions
     noop = [{"path": edits[0]["path"], "search": edits[0]["search"], "replace": edits[0]["search"]}]

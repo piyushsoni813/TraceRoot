@@ -1,0 +1,63 @@
+{
+  "_about": "AI pre-review of reported root causes (written by Claude on 2026-10-31 after checking the claims against upstream git). Not a human verdict; the reviewer's verdict in docs/root-cause-review.md is the one that counts.",
+  "filelock-346-agent-gemini-3-1-flash-live-preview-a": {
+    "verdict": "partly",
+    "note": "Mechanism right: the metaclass passes lock_file as a keyword, which breaks subclasses that renamed the first parameter. Breaking commit wrong: it names 3a79343, but the keyword passing (lock_file=lock_file) was added in 192f1ef; 3a79343 only added parameter filtering."
+  },
+  "filelock-346-agent-gemini-3-8-flash+gemini-3-flash-preview+gemini-2-5-flash-b": {
+    "verdict": "partly",
+    "note": "Same as the Flash Live run: mechanism right, breaking commit wrong (3a79343 instead of 192f1ef)."
+  },
+  "packaging-638-agent-gemini-3-1-flash-live-preview-a": {
+    "verdict": "correct",
+    "note": "extra=None reaches canonicalize_name through the PEP 685 normalization and raises TypeError. Ties it to the PEP 685 change (53dbb25) without the hash."
+  },
+  "packaging-638-agent-gemini-3-5-flash-lite-a": {
+    "verdict": "correct",
+    "note": "Same mechanism, stated clearly."
+  },
+  "packaging-638-agent-gemini-3-1-flash-lite-b": {
+    "verdict": "correct",
+    "note": "Same mechanism, brief."
+  },
+  "packaging-638-agent-gemini-3-8-live-c": {
+    "verdict": "correct",
+    "note": "Same mechanism in one sentence."
+  },
+  "packaging-638-agent-gemini-3-8-flash+gemini-3-flash-preview+gemini-2-5-flash-b": {
+    "verdict": "partly",
+    "note": "Mechanism right, history wrong. It says _get_env used to turn None into UndefinedEnvironmentName; in fact _get_env raised only for a missing key and passed None through. It names 1aa82a85 (a later commit) as breaking; the real one, 53dbb25, is mentioned but not identified as the cause."
+  },
+  "attrs-1416-agent-gemini-3-5-flash-lite-a": {
+    "verdict": "partly",
+    "note": "Right fix (materialise the transformer result), but a muddled explanation that blames subclass inheritance and includes stream-of-thought text. Misses the actual trigger: the attribute order check added in e048efc iterates the generator first, so it is empty afterwards."
+  },
+  "attrs-1416-agent-gemini-3-1-flash-lite-c": {
+    "verdict": "correct",
+    "note": "The generator from field_transformer is iterated more than once in _transform_attrs; converting it to a list fixes that. Short, no commit named."
+  },
+  "click-3449-agent-gemini-3-1-flash-live-preview-a": {
+    "verdict": "correct",
+    "note": "Closing the pager wrapper (MaybeStripAnsi, a TextIOWrapper over the borrowed stream's buffer, _termui_impl.py:444-449) closes the caller's stdout. The real fix prevents the same thing with _SkipClose in _nullpager; different place, same cause."
+  },
+  "flask-5160-agent-gemini-3-1-flash-live-preview-a": {
+    "verdict": "correct",
+    "note": "pkgutil.get_loader was replaced by importlib.util.find_spec, which raises ValueError for __main__ when __main__.__spec__ is None. Names the breaking commit."
+  },
+  "flask-5160-agent-gemini-3-5-flash-lite-a": {
+    "verdict": "correct",
+    "note": "Same correct mechanism, both functions named. The old scorer gave 'miss' only because the file field listed two files joined by 'and'."
+  },
+  "flask-5160-agent-gemini-3-1-flash-lite-a": {
+    "verdict": "partly",
+    "note": "Cause right (find_spec raises ValueError for __main__), but it only covers _find_package_path in scaffold.py; the real fix also changed get_root_path in helpers.py."
+  },
+  "flask-5160-agent-gemini-3-8-live-c": {
+    "verdict": "correct",
+    "note": "Correct and short; names the breaking commit."
+  },
+  "flask-5160-agent-gemini-3-8-flash+gemini-3-flash-preview+gemini-2-5-flash-b": {
+    "verdict": "correct",
+    "note": "Correct and complete; names the breaking commit and both functions."
+  }
+}

@@ -6,7 +6,7 @@
     "outcome": "success",
     "reproduce_exit_code": 0,
     "pytest_tail": [
-      "104 passed, 3 skipped, 1076 warnings in 59.27s"
+      "104 passed, 3 skipped, 1076 warnings in 56.48s"
     ],
     "applied_diff": "diff --git a/src/filelock/_api.py b/src/filelock/_api.py\nindex 7db0e01..11c0408 100644\n--- a/src/filelock/_api.py\n+++ b/src/filelock/_api.py\n@@ -132,7 +132,15 @@ class FileLockMeta(ABCMeta):\n         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n         init_params = {key: value for key, value in all_params.items() if key in present_params}\n         # The `lock_file` parameter is required\n-        init_params[\"lock_file\"] = lock_file\n+        if \"lock_file\" in present_params:\n+            init_params[\"lock_file\"] = lock_file\n+        else:\n+            params = list(inspect.signature(cls.__init__).parameters.values())\n+            if len(params) > 1:  # params[0] is self\n+                if params[1].kind == inspect.Parameter.VAR_POSITIONAL:\n+                    init_params[\"lock_file\"] = lock_file\n+                else:\n+                    init_params[params[1].name] = lock_file\n \n         instance = super().__call__(**init_params)\n \n"
   },

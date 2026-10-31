@@ -6,7 +6,7 @@
     "outcome": "success",
     "reproduce_exit_code": 0,
     "pytest_tail": [
-      "259 passed, 21 skipped in 0.65s"
+      "259 passed, 21 skipped in 0.61s"
     ],
     "applied_diff": "diff --git a/src/click/_termui_impl.py b/src/click/_termui_impl.py\nindex 1d23026..075952c 100644\n--- a/src/click/_termui_impl.py\n+++ b/src/click/_termui_impl.py\n@@ -390,6 +390,9 @@ class MaybeStripAnsi(io.TextIOWrapper):\n         super().__init__(stream, **kwargs)\n         self.color = color\n \n+    def close(self) -> None:\n+        self.detach()\n+\n     def write(self, text: str) -> int:\n         if not self.color:\n             text = strip_ansi(text)\n"
   },

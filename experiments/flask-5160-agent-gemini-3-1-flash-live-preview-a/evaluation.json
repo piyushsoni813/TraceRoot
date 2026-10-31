@@ -6,15 +6,15 @@
     "outcome": "success",
     "reproduce_exit_code": 0,
     "pytest_tail": [
-      "41 passed in 0.42s"
+      "41 passed in 0.38s"
     ],
     "applied_diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..47de4d4e 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,12 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except ValueError:\n+        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..60c3351f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,12 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except ValueError:\n+        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
   },
   "root_cause": {
     "status": "match",
     "commit_match": true,
-    "file_match": false,
-    "function_match": false,
+    "file_match": true,
+    "function_match": true,
     "fix_files": [
       "src/flask/helpers.py",
       "src/flask/scaffold.py"
