@@ -51,7 +51,12 @@ results, limitations) for human review. No automatic merge or deploy.
 - Step 2 done: `tools/scripts/build_sandbox_repo.py <case_id> <dest>` builds the workspace at the faulty revision.
   Leaves only branch `main`, no remote, tags, reflogs or unreachable objects. Self-checks that the fix is absent from
   `git log --all` and the object store, and that the breaking commit stays visible. Passes on all five cases.
-- Next: step 3, tools (list_dir, read_file, search, git_*, run_python, run_tests, submit).
+- Step 3 done: `tools/agent/sandbox.py` (one container per run, `docker exec`, no shell) and `tools/agent/tools.py`
+  (list_dir, read_file, search, git_log/show/blame, run_python, run_tests, submit; 20 KB output cap; paths relative, no `..`;
+  submit only under `src/`, each search must match once). `tools/agent/selftest_tools.py <case>` passes on all five cases.
+  The builder now also writes `shim_files` from `env.json` (filelock needs a generated version.py).
+  Image has a `less` stub (cat): a missing pager killed pytest silently on click's pager tests.
+- Next: step 4, hypothesis tools (record_hypothesis, update_hypothesis), then step 5 agent loop with budgets.
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.

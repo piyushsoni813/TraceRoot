@@ -46,6 +46,13 @@ for f in ("packed-refs", "ORIG_HEAD", "FETCH_HEAD"):
     if os.path.exists(p) and f != "packed-refs":
         os.remove(p)
 
+# Build-time generated files (gitignored, so they do not touch history or `git status`).
+env_path = f"{ROOT}/cases/{case}/reference/env.json"
+if os.path.exists(env_path):
+    for rel, text in json.load(open(env_path)).get("shim_files", {}).items():
+        with open(os.path.join(dest, rel), "w", newline="") as f:
+            f.write(text)
+
 # Verification: the fix and everything after the faulty revision must be gone.
 problems = []
 if git("cat-file", "-e", fixed, check=False).returncode == 0:
