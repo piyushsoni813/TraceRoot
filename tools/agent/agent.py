@@ -3,6 +3,7 @@
 usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N]
 
 model may be a comma separated chain (m1,m2,m3): when one model's daily quota ends the run continues on the next.
+A model name containing '-live' uses the Live API (WebSocket, audio-only models; only tool calls are used).
 
 A model name starting with 'local' uses llama-server on 127.0.0.1:8091 (free, for harness dry runs).
 
@@ -222,8 +223,129 @@ class LocalClient:
                  "usageMetadata": {"promptTokenCount": u.get("prompt_tokens", 0), "totalTokenCount": u.get("total_tokens", 0)}}, attempt)
 
 
+class LiveClient:
+    """Gemini Live API (WebSocket) behind the same interface as GeminiClient.
+
+    Live models only speak (AUDIO output), but they emit tool calls as structured messages, and
+    the agent's work and its report all go through tool calls, so the audio is ignored and only
+    its transcription is kept as text. One session per run: each generate() sends only what is
+    new since the last call (tool results or a nudge). Free-tier limit is tokens per minute, so
+    sends are paced by the size of the last prompt and the wait is counted in `waited`.
+    The session is resumed with the latest handle when the server announces it will close.
+    """
+    URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+    TPM = 65_000
+    connect = None  # tests replace this with a factory returning a fake socket
+
+    def __init__(self, model, log):
+        self.model, self.log, self.last_model = model, log, model
+        self.key = os.environ.get("GEMINI_API_KEY")
+        if not self.key:
+            raise SystemExit("GEMINI_API_KEY is not set")
+        self.ws, self.handle, self.reopen = None, None, False
+        self.consumed, self.waited = 0, 0.0
+        self._last_send, self._last_tokens = None, 0
+        self.system = ""
+
+    def _socket(self):
+        if LiveClient.connect:
+            return LiveClient.connect()
+        from websockets.sync.client import connect
+        return connect(self.URL, additional_headers={"x-goog-api-key": self.key}, max_size=None, open_timeout=30)
+
+    def _open(self):
+        self.ws = self._socket()
+        gen = {"responseModalities": ["AUDIO"], "temperature": 0, "topP": 1, "topK": 1}
+        if "extended-thinking" in self.model:
+            gen["thinkingConfig"] = {"thinkingLevel": "high"}
+        self.ws.send(json.dumps({"setup": {
+            "model": f"models/{self.model}", "generationConfig": gen, "outputAudioTranscription": {},
+            "systemInstruction": {"parts": [{"text": self.system}]}, "tools": [{"functionDeclarations": SPECS}],
+            "sessionResumption": {"handle": self.handle} if self.handle else {}}}))
+        first = json.loads(self.ws.recv(timeout=60))
+        if "setupComplete" not in first:
+            raise ApiError(f"live setup failed ({self.model}): {json.dumps(first)[:300]}")
+
+    def _send(self, msg):
+        if self._last_send is not None:
+            wait = self._last_send + 60.0 * self._last_tokens / self.TPM + 0.5 - time.time()
+            if wait > 0:
+                time.sleep(wait)
+                self.waited += wait
+        self.ws.send(json.dumps(msg))
+        self._last_send = time.time()
+
+    def _read(self):
+        texts, calls, usage = [], [], {}
+        while True:
+            m = json.loads(self.ws.recv(timeout=300))
+            upd = m.get("sessionResumptionUpdate") or {}
+            if upd.get("resumable") and upd.get("newHandle"):
+                self.handle = upd["newHandle"]
+            if "goAway" in m:
+                self.reopen = True
+            if m.get("usageMetadata"):
+                usage = m["usageMetadata"]
+            if "toolCall" in m:
+                calls = m["toolCall"].get("functionCalls", [])
+                break
+            sc = m.get("serverContent") or {}
+            if (sc.get("outputTranscription") or {}).get("text"):
+                texts.append(sc["outputTranscription"]["text"])
+            texts += [p["text"] for p in (sc.get("modelTurn") or {}).get("parts", []) if "text" in p]
+            if sc.get("turnComplete"):
+                break
+        self._last_tokens = usage.get("promptTokenCount", 0)
+        parts = ([{"text": "".join(texts)}] if texts else []) + [
+            {"functionCall": {"id": c.get("id"), "name": c.get("name", ""), "args": c.get("args") or {}}} for c in calls]
+        return {"candidates": [{"content": {"role": "model", "parts": parts}, "finishReason": "TOOL_CALL" if calls else "STOP"}],
+                "usageMetadata": {"promptTokenCount": usage.get("promptTokenCount", 0), "totalTokenCount": usage.get("totalTokenCount", 0)}}
+
+    def generate(self, system, contents):
+        self.system = system
+        msgs = []
+        for c in contents[self.consumed:]:
+            if c.get("role") == "model":
+                continue  # the model's own turn is already in the session
+            parts = c.get("parts", [])
+            frs = [p["functionResponse"] for p in parts if "functionResponse" in p]
+            if frs:
+                msgs.append({"toolResponse": {"functionResponses": [
+                    {"id": f.get("id"), "name": f["name"], "response": f["response"]} for f in frs]}})
+            text = "\n".join(p["text"] for p in parts if "text" in p)
+            if text:
+                msgs.append({"clientContent": {"turns": [{"role": "user", "parts": [{"text": text}]}], "turnComplete": True}})
+        self.consumed = len(contents)
+        try:
+            if self.reopen and self.ws is not None:
+                self.log("live_resume", handle_present=bool(self.handle))
+                self.close()
+                self.reopen = False
+            if self.ws is None:
+                self._open()
+            for m in msgs:
+                self._send(m)
+            return self._read(), 1
+        except ApiError:
+            raise
+        except Exception as e:  # closed socket, timeout, bad frame: the run ends with api_error
+            raise ApiError(f"live ({self.model}): {type(e).__name__}: {str(e)[:300]}")
+
+    def close(self):
+        if self.ws is not None:
+            try:
+                self.ws.close()
+            except Exception:
+                pass
+            self.ws = None
+
+
 def make_client(model, log):
-    return LocalClient(model, log) if model.startswith("local") else GeminiClient(model, log)
+    if model.startswith("local"):
+        return LocalClient(model, log)
+    if "-live" in model:
+        return LiveClient(model, log)
+    return GeminiClient(model, log)
 
 
 def sha(text):
@@ -316,6 +438,7 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
         except ApiError as e:
             outcome = "api_error"
             log("api_error", detail=str(e))
+        getattr(client, "close", lambda: None)()
         if ts.submission:
             sub = dict(ts.submission, decision="ready for human review")
             json.dump(sub, open(f"{run_dir}/submission.json", "w"), indent=2)

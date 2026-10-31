@@ -1,0 +1,11 @@
+{
+  "outcome": "api_error",
+  "tool_calls": 0,
+  "model_calls": 0,
+  "seconds": 155.9,
+  "active_seconds": 15.0,
+  "waited_seconds": 140.9,
+  "models_used": {},
+  "total_tokens": 0,
+  "last_context_tokens": 0
+}

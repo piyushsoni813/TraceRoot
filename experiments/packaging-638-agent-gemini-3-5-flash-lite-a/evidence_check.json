@@ -1,0 +1,96 @@
+{
+  "passed": false,
+  "counts": {
+    "verified": 6,
+    "unverifiable": 8,
+    "contradicted": 0
+  },
+  "total": 14,
+  "verified_fraction": 0.429,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 12 is record_hypothesis, which produces no evidence",
+      "ref": "H1 -> call 12"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 13 is run_python with output",
+      "ref": "H1 -> call 13"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 12 is record_hypothesis, which produces no evidence",
+      "ref": "H2 -> call 12"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 13 is run_python with output",
+      "ref": "H2 -> call 13"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "command does not name the tests that were run",
+      "ref": "verification[0] -> call 13"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "cited call is not a test or script run",
+      "ref": "verification[1] -> call 34"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "` unconditionally called ` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "` on all values. When ` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "` was passed as ` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "` in the environment, ` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/packaging/markers.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "packaging-638",
+  "model": "gemini-3.5-flash-lite",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "2222 passed, 436 warnings in 2.45s"
+    ],
+    "applied_diff": "diff --git a/src/packaging/markers.py b/src/packaging/markers.py\nindex a5bf35c..9731b32 100644\n--- a/src/packaging/markers.py\n+++ b/src/packaging/markers.py\n@@ -115,13 +115,13 @@ def _eval_op(lhs: str, op: Op, rhs: str) -> bool:\n     return oper(lhs, rhs)\n \n \n-def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n+def _normalize(*values: Any, key: str) -> Tuple[Any, ...]:\n     # PEP 685 \u2013 Comparison of extra names for optional distribution dependencies\n     # https://peps.python.org/pep-0685/\n     # > When comparing extra names, tools MUST normalize the names being\n     # > compared using the semantics outlined in PEP 503 for names\n     if key == \"extra\":\n-        return tuple(canonicalize_name(v) for v in values)\n+        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n \n     # other environment markers don't have such standards\n     return values\n"
+  },
+  "root_cause": {
+    "status": "partial",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": false,
+    "fix_files": [
+      "src/packaging/markers.py"
+    ],
+    "claimed": {
+      "file": "src/packaging/markers.py",
+      "function": "_normalize",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "passed": false,
+    "counts": {
+      "verified": 6,
+      "unverifiable": 8,
+      "contradicted": 0
+    },
+    "total": 14,
+    "verified_fraction": 0.429,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 12 is record_hypothesis, which produces no evidence",
+        "ref": "H1 -> call 12"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 13 is run_python with output",
+        "ref": "H1 -> call 13"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 12 is record_hypothesis, which produces no evidence",
+        "ref": "H2 -> call 12"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 13 is run_python with output",
+        "ref": "H2 -> call 13"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "command does not name the tests that were run",
+        "ref": "verification[0] -> call 13"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "cited call is not a test or script run",
+        "ref": "verification[1] -> call 34"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "` unconditionally called ` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "` on all values. When ` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "` was passed as ` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "` in the environment, ` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/packaging/markers.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 40,
+    "model_calls": 34,
+    "total_tokens": 387083,
+    "seconds": 181.9,
+    "active_seconds": 109.7,
+    "waited_seconds": 72.2,
+    "models_used": {
+      "gemini-3.5-flash-lite": 34
+    }
+  }
+}

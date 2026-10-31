@@ -282,6 +282,78 @@ check("a long rate-limit wait does not use up the time budget", res["outcome"] =
 check("result separates active and waited time", res["waited_seconds"] == 2000.0 and res["active_seconds"] < res["seconds"], res)
 check("model_response records the answering model and result counts them", all(e["model"] == "m-x" for e in ev if e["event"] == "model_response") and res["models_used"] == {"m-x": 2}, res)
 
+# 8f. LiveClient over a fake socket
+class FakeWS:
+    def __init__(self, replies):
+        self.sent, self.replies, self.closed = [], list(replies), False
+    def send(self, m): self.sent.append(json.loads(m))
+    def recv(self, timeout=None):
+        if not self.replies:
+            raise TimeoutError("no reply")
+        return json.dumps(self.replies.pop(0))
+    def close(self): self.closed = True
+
+tool_msg = lambda *calls: {"toolCall": {"functionCalls": [{"id": i, "name": n, "args": a} for i, n, a in calls]}, "usageMetadata": {"promptTokenCount": 1200, "totalTokenCount": 1300}}
+ws1 = FakeWS([{"setupComplete": {}},
+              {"serverContent": {"modelTurn": {"parts": [{"inlineData": {"mimeType": "audio/pcm", "data": "AAAA"}}]}}},
+              {"sessionResumptionUpdate": {"newHandle": "H-1", "resumable": True}},
+              tool_msg(("i1", "list_dir", {"path": "."}), ("i2", "read_file", {"path": "src/a.py"})),
+              {"serverContent": {"outputTranscription": {"text": "I will check."}}},
+              {"goAway": {"timeLeft": "5s"}},
+              {"serverContent": {"turnComplete": True}}])
+ws2 = FakeWS([{"setupComplete": {}}, tool_msg(("i3", "search", {"regex": "x"}))])
+sockets = [ws1, ws2]
+agent.LiveClient.connect = lambda: sockets.pop(0)
+clock2 = Clock()
+agent.time.time, agent.time.sleep = clock2.time, clock2.sleep
+live_log = []
+lv = agent.make_client("gemini-3.8-live", lambda e, **kw: live_log.append(e))
+check("model names with -live pick LiveClient", isinstance(lv, agent.LiveClient))
+hist = [{"role": "user", "parts": [{"text": "bug report"}]}]
+r1, _ = lv.generate("SYS", hist)
+setup = ws1.sent[0]["setup"]
+check("live setup asks for audio, transcription, our tools and the system prompt",
+      setup["generationConfig"]["responseModalities"] == ["AUDIO"] and "outputAudioTranscription" in setup
+      and len(setup["tools"][0]["functionDeclarations"]) == len(agent.SPECS) and setup["systemInstruction"]["parts"][0]["text"] == "SYS")
+check("first turn is sent as client content", ws1.sent[1] == {"clientContent": {"turns": [{"role": "user", "parts": [{"text": "bug report"}]}], "turnComplete": True}})
+p1 = r1["candidates"][0]["content"]["parts"]
+check("live tool calls come back as functionCall parts with ids", [(x["functionCall"]["id"], x["functionCall"]["name"]) for x in p1] == [("i1", "list_dir"), ("i2", "read_file")], p1)
+check("audio data is dropped", "AAAA" not in json.dumps(r1))
+check("live usage is mapped", r1["usageMetadata"]["promptTokenCount"] == 1200)
+check("resumption handle is kept", lv.handle == "H-1")
+# loop appends the model turn and the tool results; only the results go out, matched by id
+hist += [r1["candidates"][0]["content"], {"role": "user", "parts": [
+    {"functionResponse": {"id": "i1", "name": "list_dir", "response": {"result": "a"}}},
+    {"functionResponse": {"id": "i2", "name": "read_file", "response": {"result": "b"}}}]}]
+clock2.slept.clear()
+r2, _ = lv.generate("SYS", hist)
+check("tool results go out as one toolResponse with the same ids",
+      ws1.sent[2] == {"toolResponse": {"functionResponses": [{"id": "i1", "name": "list_dir", "response": {"result": "a"}},
+                                                              {"id": "i2", "name": "read_file", "response": {"result": "b"}}]}}, ws1.sent[2:])
+check("the model's own turn is not sent back", len(ws1.sent) == 3)
+check("live sends are paced by tokens per minute", clock2.slept and 1.0 <= sum(clock2.slept) <= 2.0, clock2.slept)
+check("a spoken answer becomes a text part with no calls", r2["candidates"][0]["content"]["parts"] == [{"text": "I will check."}])
+# after goAway the next turn reconnects with the handle, then sends the nudge
+hist += [r2["candidates"][0]["content"], {"role": "user", "parts": [{"text": agent.NUDGE}]}]
+r3, _ = lv.generate("SYS", hist)
+check("after goAway the session is resumed with the handle", ws1.closed and ws2.sent[0]["setup"]["sessionResumption"] == {"handle": "H-1"} and "live_resume" in live_log)
+check("the nudge goes out as client content on the new socket", ws2.sent[1]["clientContent"]["turns"][0]["parts"][0]["text"] == agent.NUDGE)
+check("calls after resume are returned", r3["candidates"][0]["content"]["parts"][0]["functionCall"]["id"] == "i3")
+# a socket error ends the run as an API error, and a refused setup too
+try:
+    lv.generate("SYS", hist + [{"role": "user", "parts": [{"text": "more"}]}])
+    check("socket errors become ApiError", False)
+except agent.ApiError as e:
+    check("socket errors become ApiError", "TimeoutError" in str(e))
+agent.LiveClient.connect = lambda: FakeWS([{"error": "bad model"}])
+try:
+    agent.LiveClient("gemini-x-live", lambda e, **kw: None).generate("SYS", [{"role": "user", "parts": [{"text": "x"}]}])
+    check("refused setup becomes ApiError", False)
+except agent.ApiError as e:
+    check("refused setup becomes ApiError", "setup failed" in str(e))
+agent.LiveClient.connect = None
+agent.time.time, agent.time.sleep = real_time, real_sleep
+
 # 9. the key never reaches the saved files
 key = os.environ["GEMINI_API_KEY"]
 leak = [os.path.join(dp, f) for dp, _, fs in os.walk(RUNS) for f in fs if key.encode() in open(os.path.join(dp, f), "rb").read()]

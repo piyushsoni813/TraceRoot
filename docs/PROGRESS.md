@@ -111,6 +111,14 @@ results, limitations) for human review. No automatic merge or deploy.
   (`active_seconds`; `seconds` is wall time; hard wall cap 60 min). `result.json` records `models_used`.
 - Decision: real runs use ONE model for the whole run, `gemini-3.5-flash-lite` (500 RPD makes complete runs possible).
   The chain is available but mixes models inside a run, so it is not used for the main results.
+- Live API models (no daily request limit, 65K tokens/min on free tier): `gemini-3.8-live`, `gemini-3.1-flash-live-preview`,
+  `gemini-3.8-live-extended-thinking`. They only output AUDIO but emit tool calls as structured messages, which is all the agent needs.
+  `LiveClient` (model name containing `-live`) keeps one WebSocket session per run, sends only new tool results, drops audio, keeps the
+  transcription as text, paces by tokens per minute and resumes the session on goAway. Needs `websockets` in `.venv` (installed 17.4).
+  Probe: 3.8-live and 3.1-flash-live-preview made parallel tool calls; extended-thinking spoke instead (nudges handle that).
+- Drivers started 2026-10-31, each as its own column (one model per run, except the labelled Flash chain):
+  gemini-3.5-flash-lite, gemini-3.1-flash-lite, Flash chain (3.8, 3, 2.5 Flash), gemini-3.8-live, gemini-3.1-flash-live-preview,
+  gemini-3.8-live-extended-thinking.
 - Next: step 10, real runs on the free tier (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
   tweak to batch independent calls (not done; it changes behaviour, so decide before the first real run).
 
