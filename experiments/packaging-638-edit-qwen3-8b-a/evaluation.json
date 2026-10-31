@@ -1,0 +1,7 @@
+{
+  "outcome": "patch_does_not_apply",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "SEARCH text matched 0 times (needs exactly 1)",
+  "file": "src/packaging/utils.py",
+  "search_preview": "def canonicalize_name(name):\n    value = _canonicalize_regex.sub(\"-\", name).lower()\n    return value"
+}

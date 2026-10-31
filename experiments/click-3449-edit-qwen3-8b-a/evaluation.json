@@ -1,0 +1,7 @@
+{
+  "outcome": "patch_does_not_apply",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "SEARCH text matched 4 times (needs exactly 1)",
+  "file": "src/click/testing.py",
+  "search_preview": "        sys.stdout.flush()"
+}

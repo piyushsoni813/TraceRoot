@@ -1,0 +1,34 @@
+{
+  "case_id": "filelock-346",
+  "faulty_revision": "3a79343711eef57b864670dc2cafd352ed749d9b",
+  "fixed_revision": "9a979dfe68fab75517c0612952ea401a232055a0",
+  "tests": [
+    "tests/test_filelock.py"
+  ],
+  "faulty": {
+    "reproduce_exit_code": 1,
+    "reproduce_tail": [
+      "  File \"D:\\TraceRoot\\.tmp\\adm-filelock-346-faulty\\src\\filelock\\_api.py\", line 137, in __call__",
+      "    instance = super().__call__(**init_params)",
+      "TypeError: FilePathLock.__init__() got an unexpected keyword argument 'lock_file'"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "",
+      "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+      "103 passed, 3 skipped, 6308 warnings in 76.04s (0:01:16)"
+    ]
+  },
+  "fixed": {
+    "reproduce_exit_code": 0,
+    "reproduce_tail": [
+      "True"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "",
+      "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+      "104 passed, 3 skipped, 6326 warnings in 73.62s (0:01:13)"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "case_id": "attrs-1416",
+  "faulty_revision": "19943b775d40c018e844f2cb1728442f58112a3b",
+  "fixed_revision": "3b0378dd66d33ebddb52be85b8c4aac6a914b1a2",
+  "tests": [
+    "tests/test_hooks.py"
+  ],
+  "faulty": {
+    "reproduce_exit_code": 1,
+    "reproduce_tail": [
+      "  File \"D:\\TraceRoot\\cases\\attrs-1416\\reference\\reproduce.py\", line 27, in <module>",
+      "    x = Subclass(dag_id=\"foo\", other=False)",
+      "TypeError: Subclass.__init__() got an unexpected keyword argument 'dag_id'"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "",
+      "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+      "13 passed, 6 warnings in 0.05s"
+    ]
+  },
+  "fixed": {
+    "reproduce_exit_code": 0,
+    "reproduce_tail": [
+      "Subclass(dag_id='foo', has_default='default', other=False)"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "",
+      "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+      "14 passed, 6 warnings in 0.06s"
+    ]
+  }
+}

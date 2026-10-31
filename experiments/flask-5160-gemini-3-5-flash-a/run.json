@@ -1,0 +1,26 @@
+{
+  "case_id": "flask-5160",
+  "status": "completed_patch_does_not_apply",
+  "run_date": "2026-10-24",
+  "input_source": "identical to flask-5160-minimal-context-v2 inputs",
+  "input_sha256": {
+    "input/report.md": "D89FEB4DD690D255FD3C0FDA69DA67BAE921499FC75D36CDC42A53FD9B2808B7",
+    "input/stacktrace.txt": "EBA5EB5E04C5D1A9FEF0CA8EC96DF767D7C0B54A31DD8E11B99DEBD10562BC85",
+    "prompt.md": "BF7D35EB3185E6212153391655D28B6A758261FA9FC5C7CAEA36F99738D7537D"
+  },
+  "inference": {
+    "provider": "Google Gemini API",
+    "model": "gemini-3.5-flash",
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_output_tokens": 16384,
+    "thinking": "model default (not disabled)",
+    "script": "invoke_gemini.py"
+  },
+  "deviations_from_local_runs": [
+    "Different model and provider.",
+    "Output limit raised to 16384 because thinking tokens count toward it.",
+    "Planned model gemini-3.1-pro-preview returned HTTP 429 quota exceeded on this key (no attempt succeeded, no response obtained); gemini-3.5-flash used instead."
+  ]
+}

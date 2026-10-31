@@ -1,0 +1,34 @@
+{
+  "case_id": "packaging-638",
+  "faulty_revision": "30554f503a5368aabf6ee571bd9cdf29d5f00c12",
+  "fixed_revision": "5c70ed4f983c4b27e67c34fe67266e1514484bf0",
+  "tests": [
+    "tests/test_markers.py"
+  ],
+  "faulty": {
+    "reproduce_exit_code": 1,
+    "reproduce_tail": [
+      "    value = _canonicalize_regex.sub(\"-\", name).lower()",
+      "            ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^",
+      "TypeError: expected string or bytes-like object, got 'NoneType'"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "",
+      "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+      "2221 passed, 5669 warnings in 3.73s"
+    ]
+  },
+  "fixed": {
+    "reproduce_exit_code": 0,
+    "reproduce_tail": [
+      "False"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "",
+      "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+      "2222 passed, 5684 warnings in 3.73s"
+    ]
+  }
+}

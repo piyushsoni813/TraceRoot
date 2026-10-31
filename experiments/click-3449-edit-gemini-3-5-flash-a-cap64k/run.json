@@ -1,0 +1,24 @@
+{
+  "case_id": "click-3449",
+  "protocol": "edit-format",
+  "status": "completed_patch_does_not_apply",
+  "run_date": "2026-10-24",
+  "scope_prefix": "src/",
+  "input_variant": "report + stack trace only",
+  "input_sha256": {
+    "prompt.md": "CD94D90A47DFC935C5DA6F759C816A8553717F21B83DDF71F4DC2FE33B0E6055",
+    "input/report.md": "EB87816D623FC5888432BC956E3D44C55FB4D5E8590ED1CD864248AD8341C300",
+    "input/stacktrace.txt": "61C4A831E581CB35396A90AE9B80131806E237A962B0864C8B9D0AF1F02A3B72"
+  },
+  "inference": {
+    "provider": "Google Gemini API",
+    "model": "gemini-3.5-flash",
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_output_tokens": 65536,
+    "thinking": "model default"
+  },
+  "runner": "tools/scripts/run_edit_experiment.py",
+  "note": "Same prompt and inputs as click-3449-edit-gemini-3-5-flash-a (hashes identical); only the output token cap is raised because that run hit MAX_TOKENS."
+}

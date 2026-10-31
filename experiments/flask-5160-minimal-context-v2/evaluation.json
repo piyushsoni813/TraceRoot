@@ -1,0 +1,18 @@
+{
+  "outcome": "patch_does_not_apply",
+  "contract_check": "Single fenced diff block, no prose outside it, only src/flask/scaffold.py touched.",
+  "patch_apply": {
+    "command": "git apply --whitespace=error (clean checkout at 84e11a1e827c0f55f9b9ee15952eddcf8a6492e0)",
+    "exit_code": 1,
+    "error": "patch failed: src/flask/scaffold.py:855; patch does not apply"
+  },
+  "evaluation_performed": false,
+  "reproduce_exit_code": null,
+  "upstream_tests": null,
+  "notes": [
+    "Raw response captured intact via API (output/response.json, output/raw.md); finish_reason=stop, 148 completion tokens.",
+    "The diff's context lines (spec/submodule_search_locations/spec.origin) do not exist in the faulty revision's _find_package_path; the model could not see the source.",
+    "Even if applied, the change does not address the ValueError raised by find_spec on __main__.",
+    "Patch was not manually repaired, per protocol."
+  ]
+}

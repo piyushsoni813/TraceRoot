@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "reproduce.py", line 11, in <module>
+    result = CliRunner().invoke(cli)
+  File "src/click/testing.py", line 676, in invoke
+    sys.stdout.flush()
+ValueError: I/O operation on closed file.

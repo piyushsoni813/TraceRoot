@@ -1,0 +1,9 @@
+{
+  "outcome": "success",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "reproduce_exit_code": 0,
+  "pytest_tail": [
+    "104 passed, 3 skipped, 1076 warnings in 79.38s (0:01:19)"
+  ],
+  "applied_diff": "output/applied.patch"
+}

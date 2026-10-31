@@ -1,0 +1,40 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..9eaf863 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -129,10 +129,31 @@ class FileLockMeta(ABCMeta):
+             **kwargs,
+         }
+ 
+-        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+-        init_params = {key: value for key, value in all_params.items() if key in present_params}
+-        # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
++        sig_params = list(inspect.signature(cls.__init__).parameters.values())  # type: ignore[misc]
++        non_self_params = sig_params[1:] if sig_params else []
++        param_names = [p.name for p in non_self_params]
++
++        lock_file_param = "lock_file" if "lock_file" in param_names else None
++        if lock_file_param is None:
++            lock_file_param = next(
++                (
++                    p.name
++                    for p in non_self_params
++                    if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
++                ),
++                None,
++            )
++
++        has_var_keyword = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in non_self_params)
++        if has_var_keyword:
++            init_params = all_params.copy()
++            if lock_file_param and lock_file_param != "lock_file":
++                init_params[lock_file_param] = init_params.pop("lock_file")
++        else:
++            present_params = set(param_names)
++            init_params = {key: value for key, value in all_params.items() if key in present_params}
++            if lock_file_param and lock_file_param in present_params:
++                init_params[lock_file_param] = lock_file
+ 
+         instance = super().__call__(**init_params)
+ 

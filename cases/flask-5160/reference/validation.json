@@ -1,0 +1,33 @@
+{
+  "upstream_issue": "https://github.com/pallets/flask/issues/5160",
+  "reference_pull_request": "https://github.com/pallets/flask/pull/5161",
+  "faulty_revision": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0",
+  "reference_revision": "4be9f521425b7ad659b182c319dc3afb8fe64f53",
+  "interpreter": "Python 3.13.7",
+  "dependencies": {
+    "Flask": "2.3.3.dev0 (editable checkout)",
+    "Werkzeug": "2.3.7",
+    "pytest": "7.3.1"
+  },
+  "targeted_evaluator": {
+    "path": "reproduce.py",
+    "sha256": "D01F44575EA2B77A1F3F52171585C999908F89175150DF81E3C5249B4791414F",
+    "faulty_result": {
+      "exit_code": 1,
+      "exception": "ValueError: __main__.__spec__ is None"
+    },
+    "reference_result": {
+      "exit_code": 0,
+      "stdout": "reproduce"
+    }
+  },
+  "upstream_regression_checks": {
+    "command": "python -m pytest -q tests/test_helpers.py tests/test_instance_config.py",
+    "faulty_result": "41 passed in 0.21s",
+    "reference_result": "41 passed in 0.24s"
+  },
+  "notes": [
+    "All repositories, caches, and pytest temporary directories for this validation were placed under D:\\TraceRoot.",
+    "The evaluator and this validation record are reference-only and must not be provided to the model."
+  ]
+}

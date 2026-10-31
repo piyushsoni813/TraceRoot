@@ -1,0 +1,15 @@
+Exception ignored in: <function BaseFileLock.__del__ at 0x0000020AA0FC4680>
+Traceback (most recent call last):
+  File "src/filelock/_api.py", line 400, in __del__
+    self.release(force=True)
+  File "src/filelock/_api.py", line 361, in release
+    if self.is_locked:
+  File "src/filelock/_api.py", line 267, in is_locked
+    return self._context.lock_file_fd is not None
+AttributeError: 'FilePathLock' object has no attribute '_context'
+Traceback (most recent call last):
+  File "reproduce.py", line 13, in <module>
+    lock = FilePathLock(path)
+  File "src/filelock/_api.py", line 137, in __call__
+    instance = super().__call__(**init_params)
+TypeError: FilePathLock.__init__() got an unexpected keyword argument 'lock_file'

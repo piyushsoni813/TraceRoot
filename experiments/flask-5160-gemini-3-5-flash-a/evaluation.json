@@ -1,0 +1,17 @@
+{
+  "outcome": "patch_does_not_apply",
+  "contract_check": "Single fenced diff block, no prose outside it, only src/flask/scaffold.py touched.",
+  "patch_apply": {
+    "command": "git apply --whitespace=error (clean checkout at 84e11a1e827c0f55f9b9ee15952eddcf8a6492e0)",
+    "exit_code": 1,
+    "error": "patch failed: src/flask/scaffold.py:856; patch does not apply"
+  },
+  "evaluation_performed": false,
+  "reproduce_exit_code": null,
+  "upstream_tests": null,
+  "notes": [
+    "Model gemini-3.5-flash, input identical to v2 (no source). finish=STOP, 98 output tokens, 4333 thinking tokens.",
+    "The diff widens an `except ImportError` to include ValueError, but the faulty code has no such `try: spec = ... except ImportError` block at that location; the context lines were invented.",
+    "Patch was not manually repaired, per protocol."
+  ]
+}

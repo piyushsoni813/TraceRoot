@@ -1,0 +1,7 @@
+{
+  "outcome": "patch_does_not_apply",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "SEARCH text matched 0 times (needs exactly 1)",
+  "file": "src/filelock/_api.py",
+  "search_preview": "    def __call__(self, *args, **kwargs):\n        init_params = {}\n        if args:\n            init_params['lock_file'] = args[0]\n        if len(args) > 1:\n            raise TypeError(\n               "
+}

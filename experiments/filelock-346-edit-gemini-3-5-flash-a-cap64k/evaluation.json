@@ -1,0 +1,9 @@
+{
+  "outcome": "evaluator_still_fails",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "reproduce_exit_code": 1,
+  "stderr_tail": [
+    "NameError: name 'args' is not defined. Did you mean: 'kwargs'?"
+  ],
+  "applied_diff": "output/applied.patch"
+}

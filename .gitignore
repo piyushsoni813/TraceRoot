@@ -1,0 +1,23 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Scratch space (runner recreates its checkouts here)
+.tmp/
+.logs/
+
+# Large local binaries and model weights
+tools/llama.cpp/
+models/
+*.gguf
+
+# Nested upstream clones (own .git, re-clone from metadata.json)
+cases/*/upstream/
+
+# Local Claude Code state
+.claude/settings.local.json
+
+# Local Claude Code config
+.claude/

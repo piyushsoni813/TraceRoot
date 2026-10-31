@@ -1,0 +1,25 @@
+{
+  "case_id": "click-3449",
+  "project": "pallets/click",
+  "project_url": "https://github.com/pallets/click",
+  "license": "BSD-3-Clause",
+  "python": "3.13.7",
+  "issue_url": "https://github.com/pallets/click/issues/3449",
+  "fix_pull_request_url": "https://github.com/pallets/click/pull/3482",
+  "faulty_revision": "a5f5aa6d4012d256ccca24638f2642fc371e9f77",
+  "fixed_revision": "5ee8e3123d8ddece6c47eff9a7a7d4ca478c4f37",
+  "last_good_ref": "8.3.3",
+  "breaking_commit": "c69643b60cf971cd5d8e5d3902632807ceab9b8f",
+  "breaking_commit_method": "git bisect run with reference/reproduce.py between last_good_ref and faulty_revision",
+  "targeted_tests": [
+    "tests/test_testing.py",
+    "tests/test_termui.py"
+  ],
+  "model_inputs": [
+    "report.md",
+    "stacktrace.txt"
+  ],
+  "reference_directory": "reference",
+  "upstream_clone": "upstream",
+  "status": "validated"
+}

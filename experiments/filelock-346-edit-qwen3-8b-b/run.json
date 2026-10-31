@@ -1,0 +1,28 @@
+{
+  "case_id": "filelock-346",
+  "protocol": "edit-format",
+  "status": "completed_evaluator_still_fails",
+  "run_date": "2026-10-24",
+  "scope_prefix": "src/",
+  "input_variant": "with source excerpt",
+  "input_sha256": {
+    "prompt.md": "845B711A82CC509F670F39B78C31333A4D3912F32040DADE34DFD13EE323A888",
+    "input/report.md": "E6D424512613AADDACC164C006F456EB46EAA0C4424B35F74F895933BB14DE77",
+    "input/source_excerpt.txt": "78E5570C3C75E41556F9E07948663989A2B5EFE55C5D992198866970EC92144E",
+    "input/stacktrace.txt": "6982E7701140C501295E6C3B6E9F71720CD4D9B0CD0055CE612134D52DDB2855"
+  },
+  "inference": {
+    "provider": "local",
+    "runtime": "llama.cpp",
+    "runtime_build": "b11840-36e36e63a",
+    "model_file": "D:\\New folder\\Qwen3-8B-Q4_K_M.gguf",
+    "gpu_layers": 99,
+    "context_length": 8192,
+    "thinking_enabled": false,
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_generated_tokens": 1024
+  },
+  "runner": "tools/scripts/run_edit_experiment.py"
+}

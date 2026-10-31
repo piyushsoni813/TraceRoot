@@ -1,0 +1,35 @@
+{
+  "case_id": "click-3449",
+  "faulty_revision": "a5f5aa6d4012d256ccca24638f2642fc371e9f77",
+  "fixed_revision": "5ee8e3123d8ddece6c47eff9a7a7d4ca478c4f37",
+  "tests": [
+    "tests/test_testing.py",
+    "tests/test_termui.py"
+  ],
+  "faulty": {
+    "reproduce_exit_code": 1,
+    "reproduce_tail": [
+      "    sys.stdout.flush()",
+      "    ~~~~~~~~~~~~~~~~^^",
+      "ValueError: I/O operation on closed file."
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "ssss.................................................................... [ 77%]",
+      "...............................................................          [100%]",
+      "258 passed, 21 skipped in 1.37s"
+    ]
+  },
+  "fixed": {
+    "reproduce_exit_code": 0,
+    "reproduce_tail": [
+      "'Hello, Click!\\n'"
+    ],
+    "pytest_exit_code": 0,
+    "pytest_tail": [
+      "sssss................................................................... [ 77%]",
+      "................................................................         [100%]",
+      "259 passed, 21 skipped in 1.41s"
+    ]
+  }
+}

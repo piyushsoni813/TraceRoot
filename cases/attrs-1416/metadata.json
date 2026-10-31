@@ -1,0 +1,24 @@
+{
+  "case_id": "attrs-1416",
+  "project": "python-attrs/attrs",
+  "project_url": "https://github.com/python-attrs/attrs",
+  "license": "MIT",
+  "python": "3.13.7",
+  "issue_url": "https://github.com/python-attrs/attrs/issues/1416",
+  "fix_pull_request_url": "https://github.com/python-attrs/attrs/pull/1417",
+  "faulty_revision": "19943b775d40c018e844f2cb1728442f58112a3b",
+  "fixed_revision": "3b0378dd66d33ebddb52be85b8c4aac6a914b1a2",
+  "last_good_ref": "25.1.0",
+  "breaking_commit": "e048efcb395443608d184a149c0adbca166cb833",
+  "breaking_commit_method": "git bisect run with reference/reproduce.py between last_good_ref and faulty_revision",
+  "targeted_tests": [
+    "tests/test_hooks.py"
+  ],
+  "model_inputs": [
+    "report.md",
+    "stacktrace.txt"
+  ],
+  "reference_directory": "reference",
+  "upstream_clone": "upstream",
+  "status": "validated"
+}

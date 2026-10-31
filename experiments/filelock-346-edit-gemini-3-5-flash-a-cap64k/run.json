@@ -1,0 +1,24 @@
+{
+  "case_id": "filelock-346",
+  "protocol": "edit-format",
+  "status": "completed_evaluator_still_fails",
+  "run_date": "2026-10-24",
+  "scope_prefix": "src/",
+  "input_variant": "report + stack trace only",
+  "input_sha256": {
+    "prompt.md": "E2CFAC6F716425B15378C0F04B90BA788BAC4E8EC1794C7D2E0C70097582A6CA",
+    "input/report.md": "E6D424512613AADDACC164C006F456EB46EAA0C4424B35F74F895933BB14DE77",
+    "input/stacktrace.txt": "6982E7701140C501295E6C3B6E9F71720CD4D9B0CD0055CE612134D52DDB2855"
+  },
+  "inference": {
+    "provider": "Google Gemini API",
+    "model": "gemini-3.5-flash",
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_output_tokens": 65536,
+    "thinking": "model default"
+  },
+  "runner": "tools/scripts/run_edit_experiment.py",
+  "note": "Same prompt and inputs as filelock-346-edit-gemini-3-5-flash-a (hashes identical); only the output token cap is raised because that run hit MAX_TOKENS."
+}

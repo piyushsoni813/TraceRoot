@@ -1,0 +1,5 @@
+{
+  "outcome": "invalid_output_contract",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "multiple blocks or prose outside the block"
+}

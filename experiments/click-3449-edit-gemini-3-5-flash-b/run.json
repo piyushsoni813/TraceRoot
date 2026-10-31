@@ -1,0 +1,24 @@
+{
+  "case_id": "click-3449",
+  "protocol": "edit-format",
+  "status": "completed_invalid_output_contract",
+  "run_date": "2026-10-24",
+  "scope_prefix": "src/",
+  "input_variant": "with source excerpt",
+  "input_sha256": {
+    "prompt.md": "0B04A857E37CF36C2AB90CE58A3A5BA912D19F1168BA186DDBA2AB3AB5FB87E5",
+    "input/report.md": "EB87816D623FC5888432BC956E3D44C55FB4D5E8590ED1CD864248AD8341C300",
+    "input/source_excerpt.txt": "FC56672B36ABF3A615EA24D248D9D77DA6EF81258CB117FB7804754FADDC39C7",
+    "input/stacktrace.txt": "61C4A831E581CB35396A90AE9B80131806E237A962B0864C8B9D0AF1F02A3B72"
+  },
+  "inference": {
+    "provider": "Google Gemini API",
+    "model": "gemini-3.5-flash",
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_output_tokens": 16384,
+    "thinking": "model default"
+  },
+  "runner": "tools/scripts/run_edit_experiment.py"
+}

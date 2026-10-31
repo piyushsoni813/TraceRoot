@@ -1,0 +1,7 @@
+{
+  "outcome": "patch_does_not_apply",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "SEARCH text matched 0 times (needs exactly 1)",
+  "file": "src/attr/_make.py",
+  "search_preview": "    if field_transformer is not None:\n        fields = field_transformer(cls, fields)"
+}

@@ -1,0 +1,28 @@
+{
+  "case_id": "packaging-638",
+  "protocol": "edit-format",
+  "status": "completed_evaluator_still_fails",
+  "run_date": "2026-10-24",
+  "scope_prefix": "src/",
+  "input_variant": "with source excerpt",
+  "input_sha256": {
+    "prompt.md": "BC1FEEA42ACFDE1D39B23823D426A0F21E1F83020F2CEFBCDC90EFD64A1460C5",
+    "input/report.md": "78E59522B9A63C8E0BE0435D5D147B34922B2DE165D36C9C2FF6BE9C5E10D12F",
+    "input/source_excerpt.txt": "0E57EDD4243B1099A09C6EC9DAD655FB462D721EBD6F64772A19542DEEB51156",
+    "input/stacktrace.txt": "3FB4BF9E1C9A449EA790E1BF86D1C231BBBFDEB0D2F3AEA8D5E7A46F2C3530CA"
+  },
+  "inference": {
+    "provider": "local",
+    "runtime": "llama.cpp",
+    "runtime_build": "b11840-36e36e63a",
+    "model_file": "D:\\New folder\\Qwen3-8B-Q4_K_M.gguf",
+    "gpu_layers": 99,
+    "context_length": 8192,
+    "thinking_enabled": false,
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_generated_tokens": 1024
+  },
+  "runner": "tools/scripts/run_edit_experiment.py"
+}

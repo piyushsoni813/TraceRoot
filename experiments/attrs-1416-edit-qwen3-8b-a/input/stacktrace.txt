@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "reproduce.py", line 27, in <module>
+    x = Subclass(dag_id="foo", other=False)
+TypeError: Subclass.__init__() got an unexpected keyword argument 'dag_id'

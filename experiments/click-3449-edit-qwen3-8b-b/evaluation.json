@@ -1,0 +1,9 @@
+{
+  "outcome": "evaluator_still_fails",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "reproduce_exit_code": 1,
+  "stderr_tail": [
+    "ValueError: I/O operation on closed file."
+  ],
+  "applied_diff": "output/applied.patch"
+}

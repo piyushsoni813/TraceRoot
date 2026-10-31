@@ -1,0 +1,24 @@
+{
+  "case_id": "packaging-638",
+  "project": "pypa/packaging",
+  "project_url": "https://github.com/pypa/packaging",
+  "license": "Apache-2.0 OR BSD-2-Clause",
+  "python": "3.13.7",
+  "issue_url": "https://github.com/pypa/packaging/issues/638",
+  "fix_pull_request_url": "https://github.com/pypa/packaging/pull/650",
+  "faulty_revision": "30554f503a5368aabf6ee571bd9cdf29d5f00c12",
+  "fixed_revision": "5c70ed4f983c4b27e67c34fe67266e1514484bf0",
+  "last_good_ref": "21.3",
+  "breaking_commit": "53dbb257e5fef150d32ef85c7427133d71651989",
+  "breaking_commit_method": "git bisect run with reference/reproduce.py between last_good_ref and faulty_revision",
+  "targeted_tests": [
+    "tests/test_markers.py"
+  ],
+  "model_inputs": [
+    "report.md",
+    "stacktrace.txt"
+  ],
+  "reference_directory": "reference",
+  "upstream_clone": "upstream",
+  "status": "validated"
+}

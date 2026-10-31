@@ -1,0 +1,15 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..55f076d 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -128,6 +128,10 @@ class FileLockMeta(ABCMeta):
+             "is_singleton": is_singleton,
+             **kwargs,
+         }
++        # Ensure 'lock_file' is passed as a keyword argument to avoid positional argument issues
++        if 'lock_file' in all_params:
++            all_params.pop('lock_file')
++            all_params['lock_file'] = lock_file
+ 
+         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+         init_params = {key: value for key, value in all_params.items() if key in present_params}

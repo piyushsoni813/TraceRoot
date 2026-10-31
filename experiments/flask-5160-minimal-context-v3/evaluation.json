@@ -1,0 +1,19 @@
+{
+  "outcome": "patch_does_not_apply",
+  "contract_check": "Single fenced diff block, no prose outside it, only src/flask/scaffold.py touched.",
+  "patch_apply": {
+    "command": "git apply --whitespace=error (clean checkout at 84e11a1e827c0f55f9b9ee15952eddcf8a6492e0)",
+    "exit_code": 1,
+    "error": "patch failed: src/flask/scaffold.py:858; patch does not apply"
+  },
+  "evaluation_performed": false,
+  "reproduce_exit_code": null,
+  "upstream_tests": null,
+  "notes": [
+    "Raw response captured via API (output/response.json, output/raw.md); finish_reason=stop, 182 completion tokens, 1324 prompt tokens.",
+    "Unlike v2, the model was given the real source excerpt, yet its hunk joined a multi-line statement into one line and used wrong line numbers, so the context did not match.",
+    "The only changed line in the diff removes and re-adds identical text, so the patch would have been a no-op and aimed at the namespace-package branch, not the unguarded find_spec call near line 858.",
+    "The evaluator was run separately on the unpatched checkout only to confirm the failure persists (exit 1, same ValueError); this is not an evaluation of the patch.",
+    "Patch was not manually repaired, per protocol."
+  ]
+}

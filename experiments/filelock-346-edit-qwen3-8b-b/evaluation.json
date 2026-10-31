@@ -1,0 +1,9 @@
+{
+  "outcome": "evaluator_still_fails",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "reproduce_exit_code": 1,
+  "stderr_tail": [
+    "TypeError: FilePathLock.__init__() got an unexpected keyword argument 'lock_file'"
+  ],
+  "applied_diff": "output/applied.patch"
+}

@@ -1,0 +1,21 @@
+diff --git a/src/click/testing.py b/src/click/testing.py
+index 1eb81d2..615bfa2 100644
+--- a/src/click/testing.py
++++ b/src/click/testing.py
+@@ -673,8 +673,14 @@ class CliRunner:
+                 exit_code = 1
+                 exc_info = sys.exc_info()
+             finally:
+-                sys.stdout.flush()
+-                sys.stderr.flush()
++                try:
++                    sys.stdout.flush()
++                except ValueError:
++                    pass
++                try:
++                    sys.stderr.flush()
++                except ValueError:
++                    pass
+ 
+                 # Stop fd capture and merge the captured bytes into
+                 # the stdout/stderr BytesIO streams. BytesIOCopy mirrors

@@ -1,0 +1,24 @@
+{
+  "case_id": "filelock-346",
+  "project": "tox-dev/filelock",
+  "project_url": "https://github.com/tox-dev/filelock",
+  "license": "MIT",
+  "python": "3.13.7",
+  "issue_url": "https://github.com/tox-dev/filelock/issues/346",
+  "fix_pull_request_url": "https://github.com/tox-dev/filelock/pull/347",
+  "faulty_revision": "3a79343711eef57b864670dc2cafd352ed749d9b",
+  "fixed_revision": "9a979dfe68fab75517c0612952ea401a232055a0",
+  "last_good_ref": "3.15.1",
+  "breaking_commit": "192f1efcb95924010d785c3f726433273f6ed114",
+  "breaking_commit_method": "git bisect run with reference/reproduce.py between last_good_ref and faulty_revision",
+  "targeted_tests": [
+    "tests/test_filelock.py"
+  ],
+  "model_inputs": [
+    "report.md",
+    "stacktrace.txt"
+  ],
+  "reference_directory": "reference",
+  "upstream_clone": "upstream",
+  "status": "validated"
+}

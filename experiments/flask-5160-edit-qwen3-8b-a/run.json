@@ -1,0 +1,26 @@
+{
+  "case_id": "flask-5160",
+  "protocol": "edit-format",
+  "status": "completed_patch_does_not_apply",
+  "run_date": "2026-10-24",
+  "input_variant": "report + stack trace only",
+  "input_sha256": {
+    "prompt.md": "6E20A532F780C9AB385C0CF7CE9EACB1BC032EBE15DB3426567D7B795339F346",
+    "input/report.md": "D89FEB4DD690D255FD3C0FDA69DA67BAE921499FC75D36CDC42A53FD9B2808B7",
+    "input/stacktrace.txt": "EBA5EB5E04C5D1A9FEF0CA8EC96DF767D7C0B54A31DD8E11B99DEBD10562BC85"
+  },
+  "inference": {
+    "provider": "local",
+    "runtime": "llama.cpp",
+    "runtime_build": "b11840-36e36e63a",
+    "model_file": "D:\\New folder\\Qwen3-8B-Q4_K_M.gguf",
+    "gpu_layers": 99,
+    "context_length": 8192,
+    "thinking_enabled": false,
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_generated_tokens": 1024
+  },
+  "runner": "tools/scripts/run_edit_experiment.py"
+}

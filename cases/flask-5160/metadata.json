@@ -1,0 +1,13 @@
+{
+  "case_id": "flask-5160",
+  "project": "pallets/flask",
+  "project_url": "https://github.com/pallets/flask",
+  "license": "BSD-3-Clause",
+  "faulty_revision": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0",
+  "python": "3.13.7",
+  "model_inputs": [
+    "report.md",
+    "stacktrace.txt"
+  ],
+  "reference_directory": "reference"
+}

@@ -1,0 +1,5 @@
+{
+  "outcome": "output_limit_reached",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "Gemini finishReason MAX_TOKENS: about 15.7k of the 16,384 output tokens were spent on thinking, so no edit block was produced. This reflects the output cap chosen for the run, not the model's repair ability; treated as invalid like an environment failure. Rerun with a larger cap in the sibling folder ending -cap64k."
+}

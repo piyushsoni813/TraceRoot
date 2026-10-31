@@ -1,0 +1,7 @@
+{
+  "outcome": "patch_does_not_apply",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "SEARCH text matched 0 times (needs exactly 1)",
+  "file": "src/flask/scaffold.py",
+  "search_preview": "    def _find_package_path(import_name):\n        root_mod_name = import_name.split('.')[0]\n        spec = importlib.util.find_spec(root_mod_name)\n        if spec is None:\n            return None\n     "
+}

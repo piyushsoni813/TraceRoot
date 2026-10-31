@@ -1,0 +1,22 @@
+diff --git a/src/packaging/markers.py b/src/packaging/markers.py
+index a5bf35c..e438948 100644
+--- a/src/packaging/markers.py
++++ b/src/packaging/markers.py
+@@ -115,13 +115,15 @@ def _eval_op(lhs: str, op: Op, rhs: str) -> bool:
+     return oper(lhs, rhs)
+ 
+ 
+-def _normalize(*values: str, key: str) -> Tuple[str, ...]:
++def _normalize(*values: Optional[str], key: str) -> Tuple[Optional[str], ...]:
+     # PEP 685 – Comparison of extra names for optional distribution dependencies
+     # https://peps.python.org/pep-0685/
+     # > When comparing extra names, tools MUST normalize the names being
+     # > compared using the semantics outlined in PEP 503 for names
+     if key == "extra":
+-        return tuple(canonicalize_name(v) for v in values)
++        return tuple(
++            canonicalize_name(v) if v is not None else None for v in values
++        )
+ 
+     # other environment markers don't have such standards
+     return values

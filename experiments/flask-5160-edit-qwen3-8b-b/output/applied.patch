@@ -1,0 +1,14 @@
+diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py
+index 3c23ef97..854aba38 100644
+--- a/src/flask/scaffold.py
++++ b/src/flask/scaffold.py
+@@ -861,6 +861,9 @@ def _find_package_path(import_name):
+     if loader is None or root_mod_name == "__main__":
+         # import name is not found, or interactive/main module
+         return os.getcwd()
++    if root_mod_name == "__main__":
++        # Handle __main__ case specifically to avoid the error
++        return os.getcwd()
+ 
+     if hasattr(loader, "get_filename"):
+         filename = loader.get_filename(root_mod_name)

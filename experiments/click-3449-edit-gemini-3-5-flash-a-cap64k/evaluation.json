@@ -1,0 +1,7 @@
+{
+  "outcome": "patch_does_not_apply",
+  "protocol": "edit-format (experiments/PROTOCOL_EDIT_FORMAT.md)",
+  "detail": "SEARCH text matched 0 times (needs exactly 1)",
+  "file": "src/click/_termui_impl.py",
+  "search_preview": "    if not isatty(sys.stdout):\n        buffer = io.TextIOWrapper(stdout, encoding=get_best_encoding(stdout))\n\n        for text in generator:\n            buffer.write(text)\n\n        buffer.flush()\n    "
+}

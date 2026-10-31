@@ -1,0 +1,27 @@
+{
+  "case_id": "flask-5160",
+  "status": "invalid_environment_failure",
+  "run_date": "2026-10-24",
+  "inference": {
+    "provider": "local",
+    "runtime": "llama.cpp",
+    "runtime_build": "b11840-36e36e63a",
+    "model_file": "D:\\New folder\\Qwen3-8B-Q4_K_M.gguf",
+    "model_family": "Qwen3 8B",
+    "quantization": "Q4_K_M GGUF",
+    "model_sha256": "D98CDCBD03E17CE47681435B5150E34C1417F50B5C0019DD560E4882C5745785",
+    "gpu_layers": 99,
+    "context_length": 8192,
+    "thinking_enabled": false,
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "min_p": 0,
+    "max_generated_tokens": 1024
+  },
+  "input_sha256": {
+    "prompt.md": "BF7D35EB3185E6212153391655D28B6A758261FA9FC5C7CAEA36F99738D7537D",
+    "input/report.md": "D89FEB4DD690D255FD3C0FDA69DA67BAE921499FC75D36CDC42A53FD9B2808B7",
+    "input/stacktrace.txt": "EBA5EB5E04C5D1A9FEF0CA8EC96DF767D7C0B54A31DD8E11B99DEBD10562BC85"
+  }
+}

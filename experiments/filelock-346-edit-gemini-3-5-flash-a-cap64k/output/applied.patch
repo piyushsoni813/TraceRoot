@@ -1,0 +1,13 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..afe6791 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -134,7 +134,7 @@ class FileLockMeta(ABCMeta):
+         # The `lock_file` parameter is required
+         init_params["lock_file"] = lock_file
+ 
+-        instance = super().__call__(**init_params)
++        instance = super().__call__(*args, **kwargs)
+ 
+         if is_singleton:
+             cls._instances[str(lock_file)] = instance  # type: ignore[attr-defined]

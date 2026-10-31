@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "reproduce.py", line 5, in <module>
+    result = marker.evaluate({"extra": None})
+  File "src/packaging/markers.py", line 241, in evaluate
+    return _evaluate_markers(self._markers, current_environment)
+  File "src/packaging/markers.py", line 150, in _evaluate_markers
+    lhs_value, rhs_value = _normalize(lhs_value, rhs_value, key=environment_key)
+  File "src/packaging/markers.py", line 124, in _normalize
+    return tuple(canonicalize_name(v) for v in values)
+  File "src/packaging/markers.py", line 124, in <genexpr>
+    return tuple(canonicalize_name(v) for v in values)
+  File "src/packaging/utils.py", line 34, in canonicalize_name
+    value = _canonicalize_regex.sub("-", name).lower()
+TypeError: expected string or bytes-like object, got 'NoneType'

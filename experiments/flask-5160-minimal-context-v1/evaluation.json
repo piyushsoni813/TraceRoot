@@ -1,0 +1,12 @@
+{
+  "outcome": "environment_failure",
+  "stage": "model-output-capture",
+  "reason": "The local llama.cpp process completed, but the command bridge truncated its response before an unchanged raw response could be persisted.",
+  "evaluation_performed": false,
+  "patch_applied": false,
+  "notes": [
+    "A partial response was visible during execution but was not retained as a model artifact.",
+    "No patch from this invocation is admitted or interpreted as an experiment result.",
+    "A subsequent experiment must use a complete-response capture path."
+  ]
+}

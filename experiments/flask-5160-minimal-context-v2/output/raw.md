@@ -1,0 +1,15 @@
+```diff
+diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py
+index 1a2b3c4..5d6e7f8 100644
+--- a/src/flask/scaffold.py
++++ b/src/flask/scaffold.py
+@@ -855,7 +855,7 @@ def _find_package_path(import_name):
+     if spec is None:
+         return None
+     if spec.submodule_search_locations:
+-        return os.path.dirname(spec.origin)
++        return os.path.dirname(spec.origin) or os.path.dirname(sys.argv[0])
+     return os.path.dirname(spec.origin)
+ 
+ def find_package(import_name):
+```
