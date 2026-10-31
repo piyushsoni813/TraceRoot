@@ -9,7 +9,8 @@ A model name starting with 'local' uses llama-server on 127.0.0.1:8091 (free, fo
 
 Writes to <run_dir>: transcript.jsonl (every model response and tool result, unedited),
 run.json (frozen configuration and hashes), submission.json (if the agent submitted) and
-result.json (outcome and cost). The API key is read from GEMINI_API_KEY and never logged.
+result.json (outcome and cost). The API key is read from .env (GEMINI_API_KEY, or the variable named by
+--key-env=NAME) and never logged; run.json records only the variable name.
 """
 import hashlib, json, os, subprocess, sys, time, urllib.error, urllib.request, uuid
 
@@ -18,6 +19,30 @@ from sandbox import Sandbox, ROOT
 from tools import Toolset, SPECS, TOOLS_HASH
 import report as report_mod
 import evidence_check
+
+KEY_ENV = "GEMINI_API_KEY"  # which variable holds the key; change with --key-env=NAME
+
+
+def load_env(path=None):
+    """Read KEY=VALUE lines from the repo's .env into os.environ (the file wins over the shell).
+    Returns the names it set. The file is gitignored and is not inside any sandbox mount."""
+    path = path or os.path.join(ROOT, ".env")
+    names = []
+    if not os.path.exists(path):
+        return names
+    for line in open(path, encoding="utf-8"):
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k, v = k.strip().removeprefix("export ").strip(), v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
+            v = v[1:-1]
+        if k:
+            os.environ[k] = v
+            names.append(k)
+    return names
+
 
 MAX_CALLS = 40
 MAX_SECONDS = 15 * 60
@@ -99,9 +124,9 @@ class GeminiClient:
         self.idx, self.waited, self.strip = 0, 0.0, False
         self.last_model = self.models[0]
         self._last_request, self._last_tokens = {}, {}
-        self.key = os.environ.get("GEMINI_API_KEY")
+        self.key = os.environ.get(KEY_ENV)
         if not self.key:
-            raise SystemExit("GEMINI_API_KEY is not set")
+            raise SystemExit(f"{KEY_ENV} is not set (put it in .env)")
 
     def _sleep(self, seconds):
         if seconds > 0:
@@ -261,9 +286,9 @@ class LiveClient:
 
     def __init__(self, model, log):
         self.model, self.log, self.last_model = model, log, model
-        self.key = os.environ.get("GEMINI_API_KEY")
+        self.key = os.environ.get(KEY_ENV)
         if not self.key:
-            raise SystemExit("GEMINI_API_KEY is not set")
+            raise SystemExit(f"{KEY_ENV} is not set (put it in .env)")
         self.ws, self.handle, self.reopen = None, None, False
         self.consumed, self.waited = 0, 0.0
         self._last_send, self._last_tokens = None, 0
@@ -431,7 +456,7 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
            "user_prompt_sha256": sha(user_text), "gen_config": GEN_CONFIG,
            "limits": {"tool_calls": max_calls, "active_seconds": max_seconds, "wall_seconds": MAX_WALL_SECONDS,
                       "context_tokens": MAX_CONTEXT_TOKENS, "note": "time spent waiting on rate limits is excluded from active_seconds"},
-           "sandbox_image": "traceroot-sandbox:1", "code_commit": code_commit()}
+           "sandbox_image": "traceroot-sandbox:1", "code_commit": code_commit(), "key_env": KEY_ENV}
     json.dump(cfg, open(f"{run_dir}/run.json", "w"), indent=2)
     log("run_start", config=cfg, system_prompt=SYSTEM_PROMPT, user_prompt=user_text)
 
@@ -528,6 +553,8 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
 if __name__ == "__main__":
     pos = [a for a in sys.argv[1:] if not a.startswith("--")]
     opts = dict(a[2:].split("=", 1) for a in sys.argv[1:] if a.startswith("--") and "=" in a)
+    load_env()
+    KEY_ENV = opts.get("key-env", KEY_ENV)
     case, run_dir = pos[0], pos[1]
     model = pos[2] if len(pos) > 2 else "gemini-3.5-flash"
     print(json.dumps(run(case, run_dir, model, max_calls=int(opts.get("max-calls", MAX_CALLS)),

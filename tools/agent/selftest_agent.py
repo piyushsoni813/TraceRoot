@@ -400,6 +400,27 @@ except agent.ApiError as e:
 agent.LiveClient.connect = None
 agent.time.time, agent.time.sleep = real_time, real_sleep
 
+# 8g. .env loading
+envf = f"{RUNS}/test.env"
+open(envf, "w").write("# comment\nTR_TEST_A=plain\nexport TR_TEST_B='quoted value'\nTR_TEST_C=\"dq\"\nnot a pair\n\nTR_TEST_D=x=y\n")
+os.environ["TR_TEST_A"] = "from shell"
+names = agent.load_env(envf)
+check(".env sets names, skips comments and junk", names == ["TR_TEST_A", "TR_TEST_B", "TR_TEST_C", "TR_TEST_D"], names)
+check(".env wins over the shell and strips quotes and export",
+      (os.environ["TR_TEST_A"], os.environ["TR_TEST_B"], os.environ["TR_TEST_C"], os.environ["TR_TEST_D"]) == ("plain", "quoted value", "dq", "x=y"))
+check("a missing .env is fine", agent.load_env(f"{RUNS}/nope.env") == [])
+old_env = agent.KEY_ENV
+agent.KEY_ENV = "TR_TEST_A"
+check("the client reads the chosen key variable", agent.GeminiClient("m", lambda e, **kw: None).key == "plain")
+agent.KEY_ENV = "TR_TEST_MISSING"
+try:
+    agent.GeminiClient("m", lambda e, **kw: None)
+    check("a missing key variable stops with its name", False)
+except SystemExit as e:
+    check("a missing key variable stops with its name", "TR_TEST_MISSING" in str(e))
+agent.KEY_ENV = old_env
+check("the repo .env is not inside a sandbox mount", not os.path.abspath(f"{ROOT}/.env").startswith(os.path.abspath(f"{ROOT}/.tmp")))
+
 # 9. the key never reaches the saved files
 key = os.environ["GEMINI_API_KEY"]
 leak = [os.path.join(dp, f) for dp, _, fs in os.walk(RUNS) for f in fs if key.encode() in open(os.path.join(dp, f), "rb").read()]
