@@ -255,6 +255,11 @@ check("pacing time is counted as waiting", abs(chain.waited - before - sum(clock
 fast = agent.GeminiClient("gemini-3.5-flash-lite", lambda e, **kw: None)
 fast.generate("sys", signed); clock.slept.clear(); fast.generate("sys", signed)
 check("a model with a higher limit waits less", clock.slept and 4.0 <= sum(clock.slept) <= 5.0, clock.slept)
+# a large prompt is paced by tokens per minute: 125k tokens at 250k TPM means about 30 s
+fast._last_tokens["gemini-3.5-flash-lite"] = 125_000
+clock.slept.clear(); fast.generate("sys", signed)
+check("a large prompt is paced by tokens per minute", clock.slept and 29.5 <= sum(clock.slept) <= 31.0, clock.slept)
+check("prompt size is read from each response", fast._last_tokens["gemini-3.5-flash-lite"] == 1000)
 # every model out of quota raises
 agent.urllib.request.urlopen = lambda req, timeout=0: (_ for _ in ()).throw(urllib.error.HTTPError(req.full_url, 429, "q", {}, io.BytesIO(b'{"error":{"message":"requests per day limit exceeded"}}')))
 allout = agent.GeminiClient("m1,m2", lambda e, **kw: None)

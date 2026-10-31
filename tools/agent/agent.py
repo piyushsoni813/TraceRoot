@@ -59,6 +59,7 @@ class DailyQuotaError(ApiError):
 RPM = {"gemini-3.5-flash": 5, "gemini-3.6-flash": 5, "gemini-3.8-flash": 5, "gemini-3-flash-preview": 5,
        "gemini-2.5-flash": 5, "gemini-2.5-flash-lite": 10, "gemini-3.5-flash-lite": 15, "gemini-3.1-flash-lite": 15}
 DEFAULT_RPM = 5
+TPM = 250_000  # free-tier input tokens per minute, same for every text model listed
 MAX_WALL_SECONDS = 60 * 60
 
 
@@ -84,7 +85,7 @@ class GeminiClient:
         self.log = log
         self.idx, self.waited, self.strip = 0, 0.0, False
         self.last_model = self.models[0]
-        self._last_request = {}
+        self._last_request, self._last_tokens = {}, {}
         self.key = os.environ.get("GEMINI_API_KEY")
         if not self.key:
             raise SystemExit("GEMINI_API_KEY is not set")
@@ -97,7 +98,9 @@ class GeminiClient:
     def _pace(self, model):
         last = self._last_request.get(model)
         if last is not None:
-            self._sleep(last + 60.0 / RPM.get(model, DEFAULT_RPM) + 0.5 - time.time())
+            # wait for whichever is stricter: requests per minute, or tokens per minute for a prompt this size
+            gap = max(60.0 / RPM.get(model, DEFAULT_RPM), 60.0 * self._last_tokens.get(model, 0) / TPM)
+            self._sleep(last + gap + 0.5 - time.time())
         self._last_request[model] = time.time()
 
     def generate(self, system, contents):
@@ -128,7 +131,9 @@ class GeminiClient:
             req = urllib.request.Request(url, body, {"Content-Type": "application/json", "x-goog-api-key": self.key})
             try:
                 raw = urllib.request.urlopen(req, timeout=300).read()
-                return json.loads(raw), attempt
+                d = json.loads(raw)
+                self._last_tokens[model] = (d.get("usageMetadata") or {}).get("promptTokenCount", 0)
+                return d, attempt
             except urllib.error.HTTPError as e:
                 detail = e.read().decode("utf-8", "replace")[:500]
                 if e.code == 429 and "per day" in detail:  # a daily quota will not clear by waiting
