@@ -2,6 +2,12 @@
 
 TraceRoot is an evidence-driven project for evaluating AI-assisted software incident investigation. The initial experiment is a single-LLM baseline that receives a bug report and stack trace; evaluation uses an independently verified regression case.
 
+## Architecture
+
+![TraceRoot architecture and workflow](docs/architecture.png)
+
+Regenerate with `python tools/scripts/draw_architecture.py` (needs matplotlib).
+
 ## Workspace layout
 
 - `cases/<case-id>/` holds case metadata, the bug report, and stack trace. Keep reference fixes in `reference/`, separate from all model inputs.
