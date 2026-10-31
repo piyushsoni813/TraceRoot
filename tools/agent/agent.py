@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sandbox import Sandbox, ROOT
 from tools import Toolset, SPECS, TOOLS_HASH
 import report as report_mod
+import evidence_check
 
 MAX_CALLS = 40
 MAX_SECONDS = 15 * 60
@@ -177,6 +178,9 @@ def run(case, run_dir, model, client_factory=GeminiClient, max_calls=MAX_CALLS, 
     if outcome == "submitted":
         errors = report_mod.write(run_dir)
         result["report_valid"], result["report_errors"] = not errors, errors
+        if os.path.exists(f"{run_dir}/report.json"):
+            ec = evidence_check.check(run_dir)
+            result["evidence_passed"], result["evidence_counts"] = ec["passed"], ec["counts"]
     log("run_end", **result)
     json.dump(result, open(f"{run_dir}/result.json", "w"), indent=2)
     tlog.close()

@@ -57,7 +57,10 @@ for case in cases:
     check("real fix scores success", ev["repair"]["outcome"] == "success", ev["repair"])
     check("root cause matched by commit", ev["root_cause"]["status"] == "match" and ev["root_cause"]["commit_match"], ev["root_cause"])
     check("cost is carried over", ev["cost"] == {"tool_calls": 7, "model_calls": 7, "total_tokens": 1234, "seconds": 9.5}, ev["cost"])
-    check("evidence is null until step 8", ev["evidence"] is None)
+    check("evidence is null without an evidence check", ev["evidence"] is None)
+    d_ev = make_run(case, f"{case}-ev", edits)
+    json.dump({"passed": True, "counts": {"verified": 3, "unverifiable": 0, "contradicted": 0}}, open(f"{d_ev}/evidence_check.json", "w"))
+    check("evidence check result is carried into the evaluation", score.score(d_ev)["evidence"]["counts"]["verified"] == 3)
 
     # wrong commit, right file, function that is in the diff -> likely (needs a person)
     diff_fn = None

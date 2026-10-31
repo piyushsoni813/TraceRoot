@@ -90,6 +90,8 @@ check("refuses to overwrite a run", subprocess.run([sys.executable, "-I", f"{ROO
 # 1b. the report for the happy run is built, valid and readable
 rep = json.load(open(f"{d_happy}/report.json"))
 check("report is valid", res_happy.get("report_valid") is True, res_happy.get("report_errors"))
+check("evidence check ran with the report", "evidence_passed" in res_happy and os.path.exists(f"{d_happy}/evidence_check.json"), res_happy)
+check("evidence check flags the weak verification call", res_happy.get("evidence_passed") is False and res_happy["evidence_counts"]["unverifiable"] >= 1, res_happy.get("evidence_counts"))
 check("report has evidence entries for cited calls", [e["call"] for e in rep["evidence"]] == [1])
 check("evidence excerpt comes from the transcript", "src" in rep["evidence"][0]["excerpt"] or rep["evidence"][0]["excerpt"] != "")
 check("report patch has the diff", "# edited" in rep["patch"]["diff"] and rep["decision"] == "ready for human review")

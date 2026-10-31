@@ -80,7 +80,13 @@ results, limitations) for human review. No automatic merge or deploy.
   `partial`, `miss`. Evidence slot stays null until step 8. Cost is copied from result.json. `selftest_score.py` (76 checks, no API):
   the real fix scores success on all five cases, no-op, wrong scope, traversal, bad search and a fix that breaks other behaviour fail correctly.
   Git clones now pin `core.autocrlf=false` so multi-line search text matches on Windows.
-- Step 8 (evidence checker) is still open.
+- Step 8 done: `tools/agent/evidence_check.py <run_dir>` writes `evidence_check.json` (runs automatically after a report is built;
+  `score.py` carries it into `evaluation.json`). Items are verified / unverifiable / contradicted. Checks: hypothesis citations (call exists,
+  came before the update, is an evidence tool, no error), verification steps (a run_tests/run_python after the last edit, command matches,
+  claimed counts and pass/fail agree with the real output), file:line citations (the line was actually shown), commit hashes (seen in a git
+  output), inline `code` quotes (seen in the transcript or bug report), root cause file opened, patch equals the apply_edit calls and the saved diff.
+  A run passes only with zero unverifiable and zero contradicted items. It cannot judge whether an argument is sound.
+  `selftest_evidence.py`: 26 checks on hand-built transcripts, no API.
 - Decision (2026-10-31): stay on the Gemini FREE tier, no billing. Limit is 20 requests per day per model, so real runs
   must be planned around that (see the run plan in the next session note).
 
