@@ -1,0 +1,112 @@
+"""Build the agent results section of README.md from the run directories (no hand-typed numbers).
+
+usage: python -I make_results_table.py
+Replaces everything from "## Investigator agent results" to the end of README.md.
+"""
+import glob, json, os
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+CASES = ["filelock-346", "packaging-638", "attrs-1416", "click-3449", "flask-5160"]
+DRIVERS = [  # (label, slug, attempt per case; later attempts replace earlier ones)
+    ("Gemini 3.1 Flash Live (preview)", "gemini-3-1-flash-live-preview"),
+    ("Gemini 3.5 Flash Lite", "gemini-3-5-flash-lite"),
+    ("Gemini 3.1 Flash Lite", "gemini-3-1-flash-lite"),
+    ("Gemini 3.8 Live", "gemini-3-8-live"),
+    ("Flash chain (3.8 Flash, 3 Flash, 2.5 Flash)", "gemini-3-8-flash+gemini-3-flash-preview+gemini-2-5-flash"),
+]
+
+
+def runs(case, slug):
+    out = []
+    for d in sorted(glob.glob(f"{ROOT}/experiments/{case}-agent-{slug}-?")):
+        if os.path.exists(f"{d}/evaluation.json"):  # finished and scored; runs in progress are left out
+            out.append((d[-1], d))
+    return out
+
+
+def why(d, res):
+    if res["outcome"] == "budget_exhausted":
+        return "no submit (40 calls used)"
+    if res["outcome"] == "api_error":
+        det = " ".join(json.loads(l).get("detail", "") for l in open(f"{d}/transcript.jsonl", encoding="utf-8") if '"api_error"' in l)
+        if "daily quota" in det:
+            return "stopped: daily quota"
+        if "503" in det:
+            return "stopped: HTTP 503 (busy)"
+        if "thought_signature" in det:
+            return "stopped: harness bug (signature)"
+        return "stopped: API error"
+    if res["outcome"] == "no_submission":
+        return "no submit (stopped calling tools)"
+    return res["outcome"]
+
+
+def cell(case, slug):
+    rs = runs(case, slug)
+    if not rs:
+        return "not run yet", None
+    att, d = rs[-1]
+    res = json.load(open(f"{d}/result.json"))
+    ev = json.load(open(f"{d}/evaluation.json"))
+    tag = f" ({att})" if att != "a" else ""
+    if ev["repair"]["outcome"] == "success":
+        c = ev["evidence"]["counts"]
+        tot = c["verified"] + c["unverifiable"] + c["contradicted"]
+        return f"**success**{tag}, root cause {ev['root_cause']['status']}, evidence {c['verified']}/{tot}", True
+    if ev["repair"]["outcome"] != "no_submission":
+        return f"{ev['repair']['outcome']}{tag}", False
+    return why(d, res) + tag, False
+
+
+lines = ["| Driver | " + " | ".join(CASES) + " | Solved |", "| --- |" + " --- |" * (len(CASES) + 1)]
+solved_by_case = {c: [] for c in CASES}
+for label, slug in DRIVERS:
+    cells, n, tried = [], 0, 0
+    for c in CASES:
+        text, ok = cell(c, slug)
+        cells.append(text)
+        if ok is not None and "not run" not in text:
+            tried += 1
+        if ok:
+            n += 1
+            solved_by_case[c].append(label)
+    lines.append(f"| {label} | " + " | ".join(cells) + f" | {n}/5 |")
+table = "\n".join(lines)
+union = sum(1 for c in CASES if solved_by_case[c])
+checkers = sorted({json.load(open(f)).get("checker_commit", "?") for f in glob.glob(f"{ROOT}/experiments/*-agent-*/evidence_check.json")})
+print(table)
+print("cases solved by at least one driver:", union)
+
+section = f"""## Investigator agent results (separate from the baseline tables above)
+
+Agent: `tools/agent/agent.py` (tools, hypotheses, budgets and report checks as in `docs/investigator-design.md`):
+40 tool calls, 15 minutes of active time (rate-limit waits excluded and recorded), 200k context tokens. All runs on the
+Gemini free tier, 2026-10-31. One model per driver, except the labelled Flash chain, which moves to the next model when one
+model's daily quota ends. "Success" is the same independent evaluator as the baseline: the submitted edits replayed on a
+fresh checkout, reproducer exits 0, held-out upstream tests pass. Root cause: `match` = breaking commit named; `likely` = same
+file and function as the real fix (a person should confirm the mechanism); `partial` = file or function only; `miss`.
+Evidence = items in the report backed by the transcript / all items checked (`tools/agent/evidence_check.py`, checker {', '.join(checkers)}).
+
+{table}
+
+Cases solved by at least one driver: {union} of 5. Baseline for comparison (single prompt, edit format): Gemini 3.5 Flash 4 of 9 runs.
+
+Reruns and exclusions (every attempt is kept in `experiments/`; the table shows the last attempt, letter in brackets):
+- Gemini 3.8 Live `a` and `b` failed because of harness bugs in the Live client (an empty turn-closing message was read as an
+  empty answer, so the agent was nudged out after about 4 calls). Fixed in c21045a and f44b893, then `c` ran.
+- Gemini 3.1 Flash Lite `a` lost filelock, packaging and attrs to HTTP 503 (Google "high demand") before 503 patience was added;
+  `b` reran those three. attrs `b` again stopped on 503 after 12 retries.
+- Flash chain `a` lost every case to HTTP 503 or to a harness bug (missing thought signature after a model switch). `b` reran with
+  the fixes; it stopped at attrs when the last model's daily quota ended. click and flask wait for the next quota reset.
+- Gemini 3.8 Live Extended Thinking was dropped: it answered in speech and made no tool calls (all five `a` runs).
+- The very first run (filelock, Gemini 3.5 Flash) stopped on the 20 request daily quota after 22 calls, before any edit.
+
+Limits of these results:
+- Five public bugs, one counted attempt per cell. Indicative only; the models may have seen these fixes in training.
+- `likely` and `partial` root causes have not yet been reviewed by a person.
+- The free tier may use prompts to improve Google products; the cases are public repositories.
+"""
+readme = open(f"{ROOT}/README.md", encoding="utf-8").read()
+a = readme.index("## Investigator agent results")
+open(f"{ROOT}/README.md", "w", encoding="utf-8", newline="\n").write(readme[:a] + section)
+print("README updated")

@@ -1,6 +1,16 @@
-﻿# TraceRoot
+# TraceRoot
 
-TraceRoot is an evidence-driven project for evaluating AI-assisted software incident investigation. The initial experiment is a single-LLM baseline that receives a bug report and stack trace; evaluation uses an independently verified regression case.
+TraceRoot tests whether an AI agent can handle a Python regression the way a careful developer would. A change broke a
+working feature and a test fails. The agent investigates the repository, its tests and its Git history. It weighs
+competing hypotheses with diagnostic checks, applies the smallest justified fix and verifies it. The output is an
+auditable report: patch, root cause, evidence, test results and limitations, ready for human review. Nothing is merged or
+deployed automatically.
+
+The project has two parts:
+
+1. **Baseline**: a single prompt (bug report and stack trace in, one patch out), scored by an independent evaluator.
+2. **Investigator agent**: a tool-using agent in a Docker sandbox, scored by the same evaluator plus root-cause and
+   evidence checks.
 
 ## Architecture
 
@@ -8,44 +18,111 @@ TraceRoot is an evidence-driven project for evaluating AI-assisted software inci
 
 Regenerate with `python tools/scripts/draw_architecture.py` (needs matplotlib).
 
-## Workspace layout
+How one agent run works:
 
-- `cases/<case-id>/` holds case metadata, the bug report, and stack trace. Keep reference fixes in `reference/`, separate from all model inputs.
-- `experiments/<run-id>/input/` stores the exact model prompt and supplied files.
-- `experiments/<run-id>/output/` stores the unedited model response.
-- `experiments/<run-id>/evaluation.json` records evaluation criteria and observed results.
+1. **Sandbox builder** (`tools/scripts/build_sandbox_repo.py`): fresh clone at the faulty revision. It removes the fix
+   commit, tags, other branches and reflogs, then checks that the fix is not reachable and not in the object store.
+2. **Docker sandbox** (`tools/sandbox/`): no network, CPU and memory limits, one container per run, no API keys inside.
+3. **Agent loop** (`tools/agent/agent.py`): drives the model with function calling. The budget is 40 tool calls,
+   15 minutes of active time (rate-limit waits are excluded and recorded) and 200k context tokens.
+4. **Tools** (`tools/agent/tools.py`): read, search, Git history, run Python, run tests, record and resolve hypotheses,
+   edit files under `src/`, submit.
+5. **Submit gates**: submit is refused until there are at least two resolved hypotheses (one supported, with cited tool
+   calls), at least one edit, a test run after the last edit, and a workspace equal to HEAD plus the recorded edits.
+6. **Report** (`tools/agent/report.py`): builds `report.json` and `report.md` and checks them against `report.schema.json`.
+7. **Evidence check** (`tools/agent/evidence_check.py`): checks every claim in the report against the saved transcript and
+   marks it verified, unverifiable or contradicted.
+8. **Scoring** (`tools/agent/score.py`): replays the edits on a fresh checkout. The reproducer must exit 0 and the held-out
+   upstream tests must pass. It also compares the reported root cause with the real fix.
 
-Do not copy anything from a case's `reference/` directory into an experiment's `input/`. Record project revisions, environment details, and commands so results can be reproduced. Do not report outcomes until commands have actually been run.
+The agent never sees the reference reproducer, the fixed revision, its tests or the breaking commit. Only the scorer uses
+them, after the run has ended.
 
-## Current state
+## Quick start
 
-- Case: `flask-5160` (pallets/flask issue 5160, faulty revision `84e11a1e827c0f55f9b9ee15952eddcf8a6492e0`).
-- Model: Qwen3-8B Q4_K_M via local llama.cpp, greedy decoding, no thinking mode.
-- `experiments/flask-5160-minimal-context-v1`: invalid (`environment_failure`). The response was lost before it could be saved; nothing was evaluated.
-- `experiments/flask-5160-minimal-context-v2`: completed, outcome `patch_does_not_apply`. The response was captured intact through the llama.cpp API and met the output contract, but the diff's context lines do not exist in the faulty revision, so `git apply` failed. The evaluator and upstream tests were not run, and the patch was not repaired by hand.
+Requirements: Git, Docker, Python 3.13.
 
-This is a single run of one small model on one case, so it is a baseline data point, not a general result.
+```
+# 1. Python environment for the evaluator and the harness
+python -m venv .venv
+.venv\Scripts\python -m pip install -r tools\sandbox\requirements.txt websockets
 
-## Results so far (case flask-5160, one attempt per cell, greedy decoding)
+# 2. Upstream clones (not stored in Git; URL in cases/<id>/metadata.json, key project_url)
+git clone https://github.com/pallets/click cases\click-3449\upstream
+#    ...and the same for the other four cases
 
-Diff-format protocol (original): Qwen3-8B fails both inputs (v2, v3); Gemini 3.5 Flash fails both (gemini-a, gemini-b). All four were rejected at `git apply`.
+# 3. Sandbox image
+docker build -t traceroot-sandbox:1 tools\sandbox
 
-Edit-format protocol (`experiments/PROTOCOL_EDIT_FORMAT.md`, edits applied by `tools/scripts/run_edit_experiment.py`):
+# 4. API key in a .env file at the repo root (gitignored)
+#    GEMINI_API_KEY=...
+#    GEMINI_API_KEY_2=...        (optional, select with --key-env=GEMINI_API_KEY_2)
+```
 
-| Model | Report + stack trace only | + source excerpt |
-| --- | --- | --- |
-| Qwen3-8B (local) | `patch_does_not_apply` | `evaluator_still_fails` |
-| Gemini 3.5 Flash | `patch_does_not_apply` | `success` (evaluator exit 0, 41 upstream tests pass) |
+Offline self-tests (no API calls):
 
-The two protocols are reported separately. Gemini 3.1 Pro was planned but its quota was exceeded on the available key, so Gemini 3.5 Flash was used.
+```
+.venv\Scripts\python -I tools\agent\selftest_tools.py click-3449
+.venv\Scripts\python -I tools\agent\selftest_agent.py
+.venv\Scripts\python -I tools\agent\selftest_evidence.py
+.venv\Scripts\python -I tools\agent\selftest_score.py
+.venv\Scripts\python -I tools\agent\selftest_e2e.py filelock-346
+```
+
+Run the agent:
+
+```
+# one case
+.venv\Scripts\python -I tools\agent\agent.py filelock-346 experiments\filelock-346-agent-<model>-a <model>
+.venv\Scripts\python -I tools\agent\score.py experiments\filelock-346-agent-<model>-a
+
+# all five cases with one model, scored, skipping folders that already exist
+.venv\Scripts\python -I tools\agent\run_batch.py gemini-3.5-flash-lite a
+
+# rebuild the results table at the end of this README from the run folders
+.venv\Scripts\python -I tools\scripts\make_results_table.py
+```
+
+Model names:
+
+- A plain Gemini model id uses the REST API.
+- A comma-separated list is a chain: the run moves to the next model when one model's daily quota ends.
+- A name containing `-live` uses the Live API over WebSocket. These models answer in audio, so only their tool calls are
+  used.
+- A name starting with `local` uses llama-server on `127.0.0.1:8091` for free harness dry runs.
+
+Before real runs, read `docs/RUN_CHECKLIST.md`.
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `cases/<id>/` | `metadata.json`, `report.md` and `stacktrace.txt` (model inputs), `reference/` (evaluator only), `upstream/` (local clone, not in Git) |
+| `tools/agent/` | agent loop, tools, sandbox wrapper, report, evidence check, scoring, batch runner, self-tests |
+| `tools/sandbox/` | Dockerfile and pinned requirements of the sandbox image |
+| `tools/scripts/` | sandbox builder, baseline runner, case admission, diagram and results table generators |
+| `experiments/` | one folder per run: inputs, unedited outputs, `evaluation.json`; agent runs also keep `transcript.jsonl` and reports |
+| `docs/` | design (`investigator-design.md`), progress notes, run checklist, case research, architecture diagram |
+
+Rules:
+
+- Nothing from a case's `reference/` folder goes into a model input.
+- Saved outputs are never edited. Existing run folders are never overwritten.
+- A failed attempt is kept and reported. A rerun gets a new letter (`a`, `b`, `c`) and the reason is written down.
+- Results are reported only after the commands have actually run.
 
 ## Cases
 
-`flask-5160` (baseline already run) plus four newly admitted regressions, each validated on both revisions with a reproducer and targeted tests: `attrs-1416`, `packaging-638`, `filelock-346`, `click-3449`. See `docs/benchmark-candidate-research.md`. The new cases have not been run against any model yet.
+Five real regressions from public projects. Each case is validated on the faulty and the fixed revision with a reproducer
+and targeted tests, and the breaking commit was found with `git bisect run` (see `docs/benchmark-candidate-research.md`):
+`flask-5160`, `attrs-1416`, `packaging-638`, `filelock-346`, `click-3449`.
 
-## Edit-format results across all five cases (2026-10-24)
+## Baseline results (single prompt, 2026-10-24)
 
-One attempt per cell, greedy decoding. `a` = report + stack trace only; `b` = plus a source excerpt built from the stack trace. `n/a` = the trace has no project frames, so there is no `b` variant.
+The model gets the bug report and stack trace (`a`), or those plus a source excerpt built from the stack trace (`b`), and
+returns one search/replace edit block (`experiments/PROTOCOL_EDIT_FORMAT.md`). `tools/scripts/run_edit_experiment.py`
+applies the edits and runs the evaluator. Each cell is one attempt with greedy decoding. `n/a` means the trace has no
+project frames, so there is no `b` variant.
 
 | Case | Qwen3-8B a | Qwen3-8B b | Gemini 3.5 Flash a | Gemini 3.5 Flash b |
 | --- | --- | --- | --- | --- |
@@ -58,11 +135,17 @@ One attempt per cell, greedy decoding. `a` = report + stack trace only; `b` = pl
 Totals over the 9 runs per model: Qwen3-8B 0 successes; Gemini 3.5 Flash 4 successes.
 
 Notes:
-- `cap64k` rows were rerun with the output cap raised to 65,536 tokens because the first run (cap 16,384) stopped at `MAX_TOKENS` after spending about 15.7k tokens thinking and produced no edit. Those first runs are recorded as `output_limit_reached` (invalid, not a model failure) in the sibling folders without the suffix.
-- `click-3449` Gemini `b` wrote a plausible edit but added prose outside the code block, which the contract rejects; it was not scored on its merits.
-- Qwen3-8B `attrs-1416 a` copied the prompt's placeholder path `src/example/module.py`, so the prompt's example path may have misled the small model. That prompt wording is shared by all runs.
-- Evaluator tests for the new cases are the upstream versions at the fixed revision (see `experiments/PROTOCOL_EDIT_FORMAT.md`).
-- Gemini runs hit HTTP 503 (service unavailable) several times; those requests returned no response and were repeated with identical settings.
+
+- An earlier diff-format protocol failed at `git apply` in all four runs (Qwen3-8B v2 and v3, Gemini 3.5 Flash a and b),
+  which is why the edit format was introduced. The two protocols are reported separately. Run v1 is invalid because its
+  response was lost before it was saved.
+- `cap64k` rows were rerun with the output cap raised to 65,536 tokens. The first runs (cap 16,384) stopped at `MAX_TOKENS`
+  after about 15.7k thinking tokens and produced no edit. They are recorded as `output_limit_reached`.
+- `click-3449` Gemini `b` wrote a plausible edit but added prose outside the code block, which the contract rejects.
+- Qwen3-8B `attrs-1416 a` copied the prompt's placeholder path `src/example/module.py`, so that wording may have misled the
+  small model.
+- Evaluator tests for the four newer cases are the upstream versions at the fixed revision.
+- Gemini runs hit HTTP 503 several times; those requests were repeated with identical settings.
 
 ## Investigator agent results (separate from the baseline tables above)
 
