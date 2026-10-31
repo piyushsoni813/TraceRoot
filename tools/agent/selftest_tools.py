@@ -53,6 +53,14 @@ with Sandbox(case, f"{ROOT}/.tmp/tools-{case}") as sb:
         check(f"path rejected {bad}", "invalid path" in t.call("read_file", {"path": bad}))
     check("unknown tool", t.call("rm_rf", {}).startswith("error: unknown"))
     check("bad args", t.call("read_file", {"nope": 1}).startswith("error: bad arguments"))
+    # repeated read-only calls are flagged, and the flag resets after an edit
+    t3 = Toolset(sb)
+    a1 = t3.call("read_file", {"path": path, "start": 1, "end": 2})
+    a2 = t3.call("read_file", {"path": path, "start": 1, "end": 2})
+    check("first read has no note", not a1.startswith("[note"))
+    check("repeated read is flagged with the earlier call number", a2.startswith("[note: identical to call 1") and a2.endswith(a1))
+    check("a different range is not flagged", not t3.call("read_file", {"path": path, "start": 1, "end": 3}).startswith("[note"))
+    check("run_tests repeats are not flagged", not t3.call("run_tests", {"selection": [test_file]}).startswith("[note") and not t3.call("run_tests", {"selection": [test_file]}).startswith("[note"))
     # hypotheses and submit gates
     t2 = Toolset(sb)
     rec = lambda i, st: t2.call("update_hypothesis", {"id": i, "status": st, "evidence": "e", "calls": [1]})

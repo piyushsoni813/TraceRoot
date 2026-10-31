@@ -193,6 +193,33 @@ check("api_error outcome keeps the tool count", res["outcome"] == "api_error" an
 check("api_error still writes workspace.patch and result.json", os.path.exists(f"{d}/workspace.patch") and os.path.exists(f"{d}/result.json"))
 check("api_error is in the transcript", ev[-2]["event"] == "api_error" and ev[-1]["event"] == "run_end")
 
+# 8c. LocalClient: Gemini-shaped history becomes OpenAI messages, and the reply comes back Gemini-shaped
+hist = [{"role": "user", "parts": [{"text": "bug"}]},
+        {"role": "model", "parts": [{"functionCall": {"id": "c1", "name": "list_dir", "args": {"path": "."}}}]},
+        {"role": "user", "parts": [{"functionResponse": {"id": "c1", "name": "list_dir", "response": {"result": "a.py"}}}]},
+        {"role": "user", "parts": [{"text": "go on"}]}]
+msgs = agent.LocalClient._messages("SYS", hist)
+check("local messages: roles in order", [m["role"] for m in msgs] == ["system", "user", "assistant", "tool", "user"], [m["role"] for m in msgs])
+check("local messages: tool call and result share an id", msgs[2]["tool_calls"][0]["id"] == msgs[3]["tool_call_id"] == "c1")
+check("local messages: arguments are a JSON string", json.loads(msgs[2]["tool_calls"][0]["function"]["arguments"]) == {"path": "."})
+sent = {}
+def local_ok(req, timeout=0):
+    sent["body"] = json.loads(req.data)
+    return Resp(json.dumps({"choices": [{"message": {"content": None, "tool_calls": [
+        {"id": "x9", "type": "function", "function": {"name": "read_file", "arguments": "{\"path\": \"src/a.py\"}"}},
+        {"id": "x10", "type": "function", "function": {"name": "search", "arguments": "not json"}}]}, "finish_reason": "tool_calls"}],
+        "usage": {"prompt_tokens": 321, "total_tokens": 400}}).encode())
+agent.urllib.request.urlopen = local_ok
+lc = agent.make_client("local-qwen3-8b", lambda e, **kw: None)
+check("model names starting with local pick LocalClient", isinstance(lc, agent.LocalClient))
+r, _ = lc.generate("SYS", hist)
+parts = r["candidates"][0]["content"]["parts"]
+check("local reply parsed into functionCall parts", [p["functionCall"]["name"] for p in parts] == ["read_file", "search"] and parts[0]["functionCall"]["args"] == {"path": "src/a.py"})
+check("local reply keeps call ids and survives bad arguments", parts[0]["functionCall"]["id"] == "x9" and parts[1]["functionCall"]["args"] == {})
+check("local usage is mapped", r["usageMetadata"] == {"promptTokenCount": 321, "totalTokenCount": 400})
+check("local request forces a tool call and sends every tool", sent["body"]["tool_choice"] == "required" and len(sent["body"]["tools"]) == len(agent.SPECS))
+check("gemini model names pick GeminiClient", isinstance(agent.make_client("gemini-3.5-flash", lambda e, **kw: None), agent.GeminiClient))
+
 # 9. the key never reaches the saved files
 key = os.environ["GEMINI_API_KEY"]
 leak = [os.path.join(dp, f) for dp, _, fs in os.walk(RUNS) for f in fs if key.encode() in open(os.path.join(dp, f), "rb").read()]

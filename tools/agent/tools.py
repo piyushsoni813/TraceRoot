@@ -79,8 +79,12 @@ SPECS = [
          "limitations": {"type": "array", "items": {"type": "string"}}},
          ["root_cause", "verification", "limitations"])}, ["report"])},
 ]
-TOOLS_HASH = hashlib.sha256(json.dumps(SPECS, sort_keys=True).encode()).hexdigest()
+# covers the declarations and the code behind them, so a behaviour change shows up in run.json
+with open(__file__, "rb") as _f:
+    _SOURCE = _f.read().replace(bytes([13, 10]), bytes([10]))
+TOOLS_HASH = hashlib.sha256(json.dumps(SPECS, sort_keys=True).encode() + _SOURCE).hexdigest()
 _NAMES = {s["name"] for s in SPECS}
+_READ_ONLY = {"list_dir", "read_file", "search", "git_log", "git_show", "git_blame"}
 
 
 class Toolset:
@@ -92,14 +96,23 @@ class Toolset:
         self.edits = []           # applied edits in order: {path, search, replace}
         self.last_edit_call = 0
         self.last_tests_call = 0
+        self._seen_calls = {}     # (tool, args) -> call number, for read-only repeats since the last edit
 
     def call(self, name, args):
         self.n_calls += 1
         fn = getattr(self, "t_" + name, None) if name in _NAMES else None
         if fn is None:
             return f"error: unknown tool {name!r}"
+        key = json.dumps([name, args], sort_keys=True, default=str)
+        earlier = self._seen_calls.get(key) if name in _READ_ONLY else None
         try:
             out = _clip(fn(**(args or {})))
+            if earlier:
+                out = f"[note: identical to call {earlier}; the files have not changed since, so the result is the same]\n" + out
+            elif name in _READ_ONLY:
+                self._seen_calls[key] = self.n_calls
+            if name == "apply_edit" and out.startswith("applied"):
+                self._seen_calls.clear()
             if name == "run_tests" and out.startswith("[exit"):
                 self.last_tests_call = self.n_calls
             return out

@@ -90,7 +90,16 @@ results, limitations) for human review. No automatic merge or deploy.
 - Decision (2026-10-31): stay on the Gemini FREE tier, no billing. Limit is 20 requests per day per model, so real runs
   must be planned around that (see the run plan in the next session note).
 
-- Next: step 10, real runs on the free tier (20 requests/day per model; plan runs around it). Prompt tweak to batch independent calls is proposed, not done.
+- Free dry run done (2026-10-31): `agent.py` accepts a model name starting with `local` (llama-server on 127.0.0.1:8091, `LocalClient`
+  converts to and from the Gemini-shaped messages). Started with `-ngl 22 -c 16384 -fa on -ctk q8_0 -ctv q8_0` (6 GB GPU).
+  Qwen3-8B on filelock-346, 15 calls: tool calling works through the harness, budget stops correctly, all files written, scores `no_submission`.
+  It repeated the same git_show three times, so read-only repeats now get a note (identical to call N). It never submitted; a small local model is for harness tests only.
+- `selftest_e2e.py <case>` (no API): a scripted model makes the real fix in a real Docker sandbox, then report, evidence check and scoring run.
+  19 checks per case, all pass on all five cases: success, root cause `match`, evidence all verified.
+- `TOOLS_HASH` now covers the tool source code as well as the declarations.
+- CLI options for short runs: `--max-calls=N --max-seconds=N`.
+- Next: step 10, real runs on the free tier (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
+  tweak to batch independent calls (not done; it changes behaviour, so decide before the first real run).
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.

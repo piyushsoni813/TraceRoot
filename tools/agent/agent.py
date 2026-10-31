@@ -1,12 +1,14 @@
 """Investigator agent loop: Gemini function calling over the sandbox tools.
 
-usage: python -I agent.py <case_id> <run_dir> [model]
+usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N]
+
+A model name starting with 'local' uses llama-server on 127.0.0.1:8091 (free, for harness dry runs).
 
 Writes to <run_dir>: transcript.jsonl (every model response and tool result, unedited),
 run.json (frozen configuration and hashes), submission.json (if the agent submitted) and
 result.json (outcome and cost). The API key is read from GEMINI_API_KEY and never logged.
 """
-import hashlib, json, os, sys, time, urllib.error, urllib.request
+import hashlib, json, os, sys, time, urllib.error, urllib.request, uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sandbox import Sandbox, ROOT
@@ -83,11 +85,86 @@ class GeminiClient:
                 raise ApiError(f"network: {e}")
 
 
+class LocalClient:
+    """llama-server (OpenAI-compatible) behind the same interface as GeminiClient.
+
+    Takes and returns Gemini-shaped messages so the loop does not change. Used to exercise the
+    whole harness for free; a small local model is not a meaningful driver for results.
+    """
+    URL = "http://127.0.0.1:8091/v1/chat/completions"
+    ATTEMPTS = 3
+
+    def __init__(self, model, log):
+        self.model, self.log = model, log
+
+    @staticmethod
+    def _messages(system, contents):
+        msgs = [{"role": "system", "content": system}]
+        for c in contents:
+            parts = c.get("parts", [])
+            if c["role"] == "user":
+                for p in parts:
+                    if "functionResponse" in p:
+                        fr = p["functionResponse"]
+                        msgs.append({"role": "tool", "tool_call_id": fr["id"], "content": fr["response"]["result"]})
+                text = "\n".join(p["text"] for p in parts if "text" in p)
+                if text:
+                    msgs.append({"role": "user", "content": text})
+            else:
+                calls = [p["functionCall"] for p in parts if "functionCall" in p]
+                m = {"role": "assistant", "content": "".join(p.get("text", "") for p in parts if "text" in p) or None}
+                if calls:
+                    m["tool_calls"] = [{"id": fc["id"], "type": "function",
+                                        "function": {"name": fc["name"], "arguments": json.dumps(fc.get("args") or {})}} for fc in calls]
+                msgs.append(m)
+        return msgs
+
+    def generate(self, system, contents):
+        body = json.dumps({
+            "messages": self._messages(system, contents), "temperature": 0, "top_k": 1, "max_tokens": 2048, "stream": False,
+            "tools": [{"type": "function", "function": s} for s in SPECS], "tool_choice": "required"}).encode()
+        for attempt in range(1, self.ATTEMPTS + 1):
+            req = urllib.request.Request(self.URL, body, {"Content-Type": "application/json"})
+            try:
+                d = json.loads(urllib.request.urlopen(req, timeout=900).read())
+                break
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode("utf-8", "replace")[:500]
+                if e.code in RETRY_CODES and attempt < self.ATTEMPTS:
+                    self.log("api_retry", attempt=attempt, status=e.code, detail=detail)
+                    time.sleep(2 * attempt)
+                    continue
+                raise ApiError(f"HTTP {e.code}: {detail}")
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                if attempt < self.ATTEMPTS:
+                    self.log("api_retry", attempt=attempt, status="network", detail=str(e)[:300])
+                    time.sleep(2 * attempt)
+                    continue
+                raise ApiError(f"network: {e}")
+        ch = (d.get("choices") or [{}])[0]
+        msg = ch.get("message") or {}
+        parts = [{"text": msg["content"]}] if msg.get("content") else []
+        for i, tc in enumerate(msg.get("tool_calls") or []):
+            fn = tc.get("function") or {}
+            try:
+                args = json.loads(fn.get("arguments") or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            parts.append({"functionCall": {"id": tc.get("id") or f"call_{uuid.uuid4().hex[:8]}", "name": fn.get("name", ""), "args": args}})
+        u = d.get("usage", {})
+        return ({"candidates": [{"content": {"role": "model", "parts": parts}, "finishReason": ch.get("finish_reason")}] if parts else [],
+                 "usageMetadata": {"promptTokenCount": u.get("prompt_tokens", 0), "totalTokenCount": u.get("total_tokens", 0)}}, attempt)
+
+
+def make_client(model, log):
+    return LocalClient(model, log) if model.startswith("local") else GeminiClient(model, log)
+
+
 def sha(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def run(case, run_dir, model, client_factory=GeminiClient, max_calls=MAX_CALLS, max_seconds=MAX_SECONDS):
+def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, max_seconds=MAX_SECONDS):
     os.makedirs(run_dir)  # refuses to overwrite an existing run
     case_dir = f"{ROOT}/cases/{case}"
     report_md = open(f"{case_dir}/report.md", encoding="utf-8").read()
@@ -143,7 +220,7 @@ def run(case, run_dir, model, client_factory=GeminiClient, max_calls=MAX_CALLS, 
                 replies = []
                 for fc in calls:
                     if ts.n_calls >= max_calls:
-                        replies.append({"functionResponse": {"name": fc["name"], "response": {"result": "error: tool call budget exhausted"}}})
+                        replies.append({"functionResponse": dict({"name": fc["name"], "response": {"result": "error: tool call budget exhausted"}}, **({"id": fc["id"]} if fc.get("id") else {}))})
                         continue
                     t_call = time.time()
                     result = ts.call(fc["name"], fc.get("args"))
@@ -152,7 +229,10 @@ def run(case, run_dir, model, client_factory=GeminiClient, max_calls=MAX_CALLS, 
                     notice = f"[tool call {ts.n_calls} of {max_calls} used, {left} left, {mins:.0f} min left]"
                     log("tool_call", n=ts.n_calls, name=fc["name"], args=fc.get("args"), result=result, notice=notice,
                         seconds=round(time.time() - t_call, 2))
-                    replies.append({"functionResponse": {"name": fc["name"], "response": {"result": f"{result}\n{notice}"}}})
+                    fr = {"name": fc["name"], "response": {"result": f"{result}\n{notice}"}}
+                    if fc.get("id"):
+                        fr["id"] = fc["id"]
+                    replies.append({"functionResponse": fr})
                     if ts.submission:
                         break
                 contents.append({"role": "user", "parts": replies})
@@ -188,6 +268,9 @@ def run(case, run_dir, model, client_factory=GeminiClient, max_calls=MAX_CALLS, 
 
 
 if __name__ == "__main__":
-    case, run_dir = sys.argv[1], sys.argv[2]
-    model = sys.argv[3] if len(sys.argv) > 3 else "gemini-3.5-flash"
-    print(json.dumps(run(case, run_dir, model), indent=2))
+    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    opts = dict(a[2:].split("=", 1) for a in sys.argv[1:] if a.startswith("--") and "=" in a)
+    case, run_dir = pos[0], pos[1]
+    model = pos[2] if len(pos) > 2 else "gemini-3.5-flash"
+    print(json.dumps(run(case, run_dir, model, max_calls=int(opts.get("max-calls", MAX_CALLS)),
+                         max_seconds=int(opts.get("max-seconds", MAX_SECONDS))), indent=2))
