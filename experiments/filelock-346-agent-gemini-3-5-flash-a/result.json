@@ -1,0 +1,8 @@
+{
+  "outcome": "api_error",
+  "tool_calls": 22,
+  "model_calls": 16,
+  "seconds": 403.3,
+  "total_tokens": 341369,
+  "last_context_tokens": 36747
+}

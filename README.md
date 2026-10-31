@@ -57,3 +57,19 @@ Notes:
 - Qwen3-8B `attrs-1416 a` copied the prompt's placeholder path `src/example/module.py`, so the prompt's example path may have misled the small model. That prompt wording is shared by all runs.
 - Evaluator tests for the new cases are the upstream versions at the fixed revision (see `experiments/PROTOCOL_EDIT_FORMAT.md`).
 - Gemini runs hit HTTP 503 (service unavailable) several times; those requests returned no response and were repeated with identical settings.
+
+## Investigator agent results (separate from the baseline tables above)
+
+Agent: `tools/agent/agent.py` with the tools, budgets and report checks described in `docs/investigator-design.md`
+(40 tool calls, 15 minutes, 200k context tokens). Driver model: Gemini 3.5 Flash on the free tier (20 requests per day,
+5 per minute). Quota errors named the model `gemini-3.6-flash` although `gemini-3.5-flash` was requested; this looks like an alias.
+One attempt per case. System prompt frozen on 2026-10-31 (commit d30bd84).
+
+| Case | Run outcome | Repair | Root cause | Evidence | Tool calls | Model requests |
+| --- | --- | --- | --- | --- | --- | --- |
+| filelock-346 | `api_error` (daily quota) | `no_submission` | n/a | n/a | 22 | 16 |
+
+Notes:
+- filelock-346: the run stopped at 403 s with HTTP 429 (daily free-tier quota) after 22 tool calls. By then the agent had
+  recorded two hypotheses and was running diagnostics, but had made no edit. This measures the free-tier limit, not the agent's ability.
+  The run was not repeated. Retries are logged in `transcript.jsonl`: 5 times HTTP 503 and once HTTP 429 (per-minute limit).

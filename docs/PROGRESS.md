@@ -100,6 +100,10 @@ results, limitations) for human review. No automatic merge or deploy.
 - CLI options for short runs: `--max-calls=N --max-seconds=N`.
 - FROZEN before the first real run (2026-10-31): the system prompt now has an Efficiency paragraph asking the model to send independent calls
   together in one reply (needed because the smoke run used one request per call and the free tier allows 20 requests/day). Not to be changed after results are seen.
+- First real run (2026-10-31, filelock-346, `experiments/filelock-346-agent-gemini-3-5-flash-a`): ended `api_error` on the DAILY free-tier
+  quota (20 requests) after 16 successful requests and 22 tool calls (batching worked: 1.4 calls per request), no edit made, `no_submission`.
+  Conclusion: one run needs more than 20 requests (the agent was still investigating at request 16), so the free tier cannot finish a run in one day.
+  Failed 503 attempts may also count against the quota. The run is kept and not repeated.
 - Next: step 10, real runs on the free tier (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
   tweak to batch independent calls (not done; it changes behaviour, so decide before the first real run).
 
