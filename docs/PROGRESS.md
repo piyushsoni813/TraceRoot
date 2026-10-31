@@ -98,6 +98,8 @@ results, limitations) for human review. No automatic merge or deploy.
   19 checks per case, all pass on all five cases: success, root cause `match`, evidence all verified.
 - `TOOLS_HASH` now covers the tool source code as well as the declarations.
 - CLI options for short runs: `--max-calls=N --max-seconds=N`.
+- FROZEN before the first real run (2026-10-31): the system prompt now has an Efficiency paragraph asking the model to send independent calls
+  together in one reply (needed because the smoke run used one request per call and the free tier allows 20 requests/day). Not to be changed after results are seen.
 - Next: step 10, real runs on the free tier (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
   tweak to batch independent calls (not done; it changes behaviour, so decide before the first real run).
 

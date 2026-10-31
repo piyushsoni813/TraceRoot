@@ -38,6 +38,8 @@ Method:
 
 Budget: at most {MAX_CALLS} tool calls in total (every call counts, including hypothesis and submit calls), {MAX_SECONDS // 60} minutes, and each tool output is cut at 20 KB. Each tool result ends with a line showing your remaining budget. If you run out before submitting, the run fails with no result, so leave enough calls to verify and submit. If you could not fully verify something, say so under limitations instead of claiming it.
 
+Efficiency: each reply you send uses one request from a small daily allowance, so do not spend a reply on a single call when several are independent. Send independent calls together in one reply (for example read two files, or record both hypotheses). Calls that depend on an earlier result must wait for it. Every call still counts toward the {MAX_CALLS} call budget, and they run in the order you list them.
+
 Always answer with a tool call."""
 
 NUDGE = "Continue by calling a tool. When you are done, call submit."
