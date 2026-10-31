@@ -137,6 +137,9 @@ results, limitations) for human review. No automatic merge or deploy.
 - Scorer fix: root cause fields listing several files or functions ("a.py and b.py", "f, g") are now split before matching;
   re-scoring changed only flask 3.5 Flash Lite from miss to likely.
 - Evidence checker limit seen in review: it verifies that a cited commit appears in a git output, not that what is said about it is true.
+- Budget analysis (step 3 of the plan): `docs/budget-analysis.md`. Runs that ran out of calls hypothesised late (median call 27
+  vs 10) and explored more (16.5 diagnostic runs vs 7); two filelock runs thrashed with 9 and 12 edits. Proposed protocol v2:
+  hypothesis checkpoint at call 15, repair checkpoint at call 25, thrash guard after 3 failing edit/test cycles. Not applied yet.
 - Parked for later: discussion of a multi-agent design (planner, reviewer) on top of the single investigator agent.
 - Next, in order: (2) root cause review sheet for a person to confirm likely/partial, (3) analyse where the 40 calls go in
   budget_exhausted runs, (4) test improvements as protocol v2 against frozen v1, (5) new cases fixed after model training cutoffs. (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
