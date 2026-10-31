@@ -1,0 +1,148 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "packaging-638",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "2222 passed, 436 warnings in 1.64s"
+    ],
+    "applied_diff": "diff --git a/src/packaging/markers.py b/src/packaging/markers.py\nindex a5bf35c..8c91548 100644\n--- a/src/packaging/markers.py\n+++ b/src/packaging/markers.py\n@@ -121,7 +121,7 @@ def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n     # > When comparing extra names, tools MUST normalize the names being\n     # > compared using the semantics outlined in PEP 503 for names\n     if key == \"extra\":\n-        return tuple(canonicalize_name(v) for v in values)\n+        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n \n     # other environment markers don't have such standards\n     return values\n"
+  },
+  "root_cause": {
+    "status": "partial",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": false,
+    "fix_files": [
+      "src/packaging/markers.py"
+    ],
+    "claimed": {
+      "file": "src/packaging/markers.py",
+      "function": "_normalize",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 14,
+      "unverifiable": 2,
+      "contradicted": 0
+    },
+    "total": 16,
+    "verified_fraction": 0.875,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 12 is apply_edit, which produces no evidence",
+        "ref": "H1 -> call 12"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 13 is run_python with output",
+        "ref": "H1 -> call 13"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 12 is apply_edit, which produces no evidence",
+        "ref": "H2 -> call 12"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 13 is run_python with output",
+        "ref": "H2 -> call 13"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 13 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 13"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 14 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 13"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "H1.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`canonicalize_name` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_evaluate_markers` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/packaging/markers.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 17,
+    "model_calls": 16,
+    "total_tokens": 90757,
+    "seconds": 90.1,
+    "active_seconds": 26.7,
+    "waited_seconds": 63.4,
+    "models_used": {
+      "gemini-3.8-live": 16
+    }
+  }
+}

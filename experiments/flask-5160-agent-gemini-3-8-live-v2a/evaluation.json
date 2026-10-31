@@ -1,0 +1,101 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "41 passed in 0.35s"
+    ],
+    "applied_diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..4d1489eb 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,11 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except ValueError:\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..dead824f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,11 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except ValueError:\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "root_cause": {
+    "status": "match",
+    "commit_match": true,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/flask/helpers.py",
+      "src/flask/scaffold.py"
+    ],
+    "claimed": {
+      "file": "src/flask/helpers.py and src/flask/scaffold.py",
+      "function": "get_root_path and _find_package_path",
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+    },
+    "needs_human_review": false
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 5,
+      "unverifiable": 3,
+      "contradicted": 0
+    },
+    "total": 8,
+    "verified_fraction": 0.625,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 8 is git_show with output",
+        "ref": "H1 -> call 8"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 15 is apply_edit, which produces no evidence",
+        "ref": "H2 -> call 15"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 22 is apply_edit, which produces no evidence",
+        "ref": "H2 -> call 22"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 23 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 22"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0 appears in a git output",
+        "ref": "root_cause.breaking_commit"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "unverifiable",
+        "detail": "src/flask/helpers.py and src/flask/scaffold.py was never opened or found by a search",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 27,
+    "model_calls": 27,
+    "total_tokens": 234934,
+    "seconds": 225.7,
+    "active_seconds": 50.0,
+    "waited_seconds": 175.7,
+    "models_used": {
+      "gemini-3.8-live": 27
+    }
+  }
+}

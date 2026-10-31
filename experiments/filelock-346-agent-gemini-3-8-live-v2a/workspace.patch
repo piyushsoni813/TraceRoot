@@ -1,0 +1,27 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..c0038b9 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -130,11 +130,19 @@ class FileLockMeta(ABCMeta):
+         }
+ 
+         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
++        
+         init_params = {key: value for key, value in all_params.items() if key in present_params}
+         # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
+-
+-        instance = super().__call__(**init_params)
++        if "lock_file" in present_params:
++            init_params["lock_file"] = lock_file
++        
++        if "file_path" in present_params and "lock_file" not in present_params:
++             # Fallback for FilePathLock(file_path)
++             instance = cls.__new__(cls)
++             # We can't call __init__ properly without the actual file_path value passed to __call__
++             # But __call__ only receives standard FileLock arguments.
++             # This suggests that FilePathLock(path) is calling FileLockMeta.__call__(path) which is wrong if signature differs.
++             pass
+ 
+         if is_singleton:
+             cls._instances[str(lock_file)] = instance  # type: ignore[attr-defined]

@@ -1,0 +1,85 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 9,
+    "unverifiable": 3,
+    "contradicted": 0
+  },
+  "total": 12,
+  "verified_fraction": 0.75,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 13 is read_file with output",
+      "ref": "H1 -> call 13"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 13 is read_file with output",
+      "ref": "H2 -> call 13"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 27 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 13"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "command does not name the tests that were run",
+      "ref": "verification[1] -> call 27"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`_normalize()` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`canonicalize_name()` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`extra == \"opt-feature\"` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/packaging/markers.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

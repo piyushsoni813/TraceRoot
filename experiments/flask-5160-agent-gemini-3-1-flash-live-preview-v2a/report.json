@@ -1,0 +1,119 @@
+{
+  "case_id": "flask-5160",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 38,
+    "seconds": 61.0,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "function": "_find_package_path, get_root_path",
+    "mechanism": "The commit replaced `pkgutil.get_loader` with `importlib.util.find_spec`. When running a script directly, `__name__` is `\"__main__\"`. If `sys.modules[\"__main__\"].__spec__` is `None` (which is common when running scripts directly), `importlib.util.find_spec(\"__main__\")` raises `ValueError: __main__.__spec__ is None`. This caused `Flask(__name__)` to fail during initialization.",
+    "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0",
+    "file": "src/flask/scaffold.py, src/flask/helpers.py"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The recent change replaced `pkgutil.get_loader(root_mod_name)` with `importlib.util.find_spec(root_mod_name)`. When `root_mod_name` is `\"__main__\"`, `find_spec` raises `ValueError` if `sys.modules[\"__main__\"].__spec__` is `None`. This happens when running a script directly. Previously `pkgutil.get_loader(\"__main__\")` did not raise this error.",
+      "predicts": "Running a script that calls `Flask(__name__)` will fail with `ValueError: __main__.__spec__ is None` when `__spec__` is not set on `__main__`.",
+      "status": "rejected",
+      "evidence": "H2 is supported, which is essentially the same as H1 but more precise about the location.",
+      "calls": [
+        11
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The recent change introduced a call to `importlib.util.find_spec(root_mod_name)` at line 858. When `root_mod_name` is `\"__main__\"`, `find_spec` raises `ValueError` if `sys.modules[\"__main__\"].__spec__` is `None`. This happens when running a script directly. The previous code using `pkgutil.get_loader` did not have this issue.",
+      "predicts": "Running a script that calls `Flask(__name__)` will fail with `ValueError: __main__.__spec__ is None` when `__spec__` is not set on `__main__`.",
+      "status": "supported",
+      "evidence": "Running Flask('__main__') with sys.modules['__main__'].__spec__ = None reproduced the ValueError.",
+      "calls": [
+        11
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 11,
+      "tool": "run_python",
+      "args": {
+        "code": "import sys\nfrom flask import Flask\n\n# Simulate running as a script\nsys.modules['__main__'].__spec__ = None\n\ntry:\n    app = Flask('__main__')\n    print(\"Success\")\nexcept ValueError as e:\n    print(f\"Caught expected ValueError: {e}\")\nexcept Exception as e:\n    print(f\"Caught unexpected exception: {type(e).__name__}: {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nCaught expected ValueError: __main__.__spec__ is None\n"
+    },
+    {
+      "call": 30,
+      "tool": "run_python",
+      "args": {
+        "code": "import sys\nimport os\n\n# Add src to sys.path so we can import flask\nsys.path.insert(0, os.path.abspath('src'))\n\nfrom flask import Flask\n\n# Simulate running as a script\nsys.modules['__main__'].__spec__ = None\n\ntry:\n    app = Flask('__main__')\n    print(\"Success\")\n    print(f\"Instance path: {app.instance_path}\")\nexcept ValueError as e:\n    print(f\"Caught ValueError: {e}\")\n    import traceback\n    traceback.print_exc()\nexcept Exception as e:\n    print(f\"Caught unexpected exception: {type(e).__name__}: {e}\")\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nCaught ValueError: __main__.__spec__ is None\nTraceback (most recent call last):\n  File \"<string>\", line 13, in <module>\n    app = Flask('__main__')\n  File \"/work/src/flask/app.py\", line 367, in __init__\n    super().__init__(\n    ~~~~~~~~~~~~~~~~^\n        import_name=import_name,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n        root_path=root_path,\n        ^^^^^^^^^^^^^^^^^^^^\n"
+    },
+    {
+      "call": 34,
+      "tool": "run_python",
+      "args": {
+        "code": "import sys\nimport os\n\n# Add src to sys.path so we can import flask\nsys.path.insert(0, os.path.abspath('src'))\n\nfrom flask import Flask\n\n# Simulate running as a script\nsys.modules['__main__'].__spec__ = None\n\ntry:\n    app = Flask('__main__')\n    print(\"Success\")\n    print(f\"Instance path: {app.instance_path}\")\nexcept ValueError as e:\n    print(f\"Caught ValueError: {e}\")\n    import traceback\n    traceback.print_exc()\nexcept Exception as e:\n    print(f\"Caught unexpected exception: {type(e).__name__}: {e}\")\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nSuccess\nInstance path: /work/instance\n"
+    },
+    {
+      "call": 37,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_basic.py",
+          "tests/test_helpers.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [ 45%]\n........................................................................ [ 91%]\n..............                                                           [100%]\n158 passed in 1.89s\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    if root_mod_name == \"__main__\":\n        spec = None\n    else:\n        spec = importlib.util.find_spec(root_mod_name)\n\n    loader = spec.loader if spec is not None else None"
+      },
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    root_mod_name, _, _ = import_name.partition(\".\")\n\n    try:\n        root_spec = importlib.util.find_spec(root_mod_name)\n\n        if root_spec is None:\n            raise ValueError(\"not found\")\n    # ImportError: the machinery told us it does not exist\n    # ValueError:\n    #    - the module name was invalid\n    #    - the module name is __main__\n    #    - *we* raised `ValueError` due to `root_spec` being `None`\n    except (ImportError, ValueError):",
+        "replace": "    root_mod_name, _, _ = import_name.partition(\".\")\n\n    if root_mod_name == \"__main__\":\n        root_spec = None\n    else:\n        try:\n            root_spec = importlib.util.find_spec(root_mod_name)\n        except ValueError:\n            # __main__.__spec__ is None\n            root_spec = None\n\n    try:\n        if root_spec is None:\n            raise ValueError(\"not found\")\n    # ImportError: the machinery told us it does not exist\n    # ValueError:\n    #    - the module name was invalid\n    #    - *we* raised `ValueError` due to `root_spec` being `None`\n    except (ImportError, ValueError):"
+      },
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    if root_mod_name == \"__main__\":\n        spec = None\n    else:\n        spec = importlib.util.find_spec(root_mod_name)\n\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    if root_mod_name == \"__main__\":\n        spec = None\n    else:\n        try:\n            spec = importlib.util.find_spec(root_mod_name)\n        except ValueError:\n            # __main__.__spec__ is None\n            spec = None\n\n    loader = spec.loader if spec is not None else None"
+      },
+      {
+        "path": "src/flask/helpers.py",
+        "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # Next attempt: check the loader.\n    if import_name == \"__main__\":\n        spec = None\n    else:\n        try:\n            spec = importlib.util.find_spec(import_name)\n        except ValueError:\n            # __main__.__spec__ is None\n            spec = None\n\n    loader = spec.loader if spec is not None else None"
+      }
+    ],
+    "diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..f370e61e 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,15 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    if import_name == \"__main__\":\n+        spec = None\n+    else:\n+        try:\n+            spec = importlib.util.find_spec(import_name)\n+        except ValueError:\n+            # __main__.__spec__ is None\n+            spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..4343827f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -817,15 +817,21 @@ def _find_package_path(import_name):\n     \"\"\"Find the path that contains the package or module.\"\"\"\n     root_mod_name, _, _ = import_name.partition(\".\")\n \n-    try:\n-        root_spec = importlib.util.find_spec(root_mod_name)\n+    if root_mod_name == \"__main__\":\n+        root_spec = None\n+    else:\n+        try:\n+            root_spec = importlib.util.find_spec(root_mod_name)\n+        except ValueError:\n+            # __main__.__spec__ is None\n+            root_spec = None\n \n+    try:\n         if root_spec is None:\n             raise ValueError(\"not found\")\n     # ImportError: the machinery told us it does not exist\n     # ValueError:\n     #    - the module name was invalid\n-    #    - the module name is __main__\n     #    - *we* raised `ValueError` due to `root_spec` being `None`\n     except (ImportError, ValueError):\n         pass  # handled below\n@@ -855,7 +861,15 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    if root_mod_name == \"__main__\":\n+        spec = None\n+    else:\n+        try:\n+            spec = importlib.util.find_spec(root_mod_name)\n+        except ValueError:\n+            # __main__.__spec__ is None\n+            spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "verification": [
+    {
+      "call": 30,
+      "command": "run_python reproduction script",
+      "result": "Caught ValueError: __main__.__spec__ is None\nTraceback (most recent call last):\n...\n  File \"/work/src/flask/scaffold.py\", line 98, in __init__\n    root_path = get_root_path(self.import_name)\n  File \"/work/src/flask/helpers.py\", line 578, in get_root_path\n    spec = importlib.util.find_spec(import_name)\n  File \"<frozen importlib.util>\", line 111, in find_spec\nValueError: __main__.__spec__ is None"
+    },
+    {
+      "result": "Success\nInstance path: /work/instance",
+      "command": "run_python reproduction script after fix",
+      "call": 34
+    },
+    {
+      "result": "158 passed",
+      "call": 37,
+      "command": "run_tests tests/test_basic.py tests/test_helpers.py"
+    }
+  ],
+  "limitations": [],
+  "decision": "ready for human review"
+}

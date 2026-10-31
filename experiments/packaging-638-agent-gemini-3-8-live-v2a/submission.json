@@ -1,0 +1,59 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)",
+      "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "function": "_normalize",
+      "breaking_commit": "",
+      "mechanism": "The `_normalize` function attempted to unconditionally canonicalize the `extra` environment marker value using `canonicalize_name`. When `extra` was passed as `None` (which occurs when no extra is evaluated), `canonicalize_name` raised a `TypeError` because it expected a string. The fix checks if the value is `None` before canonicalizing.",
+      "file": "src/packaging/markers.py"
+    },
+    "verification": [
+      {
+        "result": "False",
+        "call": 13,
+        "command": "python -c 'from packaging.markers import Marker; marker = Marker(\"extra == \\\"opt-feature\\\"\"); print(marker.evaluate({\"extra\": None}))'"
+      },
+      {
+        "call": 14,
+        "command": "pytest tests/test_markers.py",
+        "result": "        [exit 0]\n........................................................................ [  3%]\n...\n2221 passed in 4.23s"
+      }
+    ],
+    "limitations": []
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The `TypeError` occurs because `canonicalize_name` does not accept `None`. We can fix this by handling `None` in `_normalize` or by ensuring `None` is not passed to `canonicalize_name`.",
+      "predicts": "If we modify `_normalize` to skip `canonicalize_name` when the value is `None`, the `TypeError` will be avoided and the marker evaluation will correctly return `False`.",
+      "status": "supported",
+      "evidence": "The fix in `_normalize` handles `None` values for `extra` by skipping `canonicalize_name`. The reproduction script now evaluates to `False` without raising `TypeError`. Existing tests pass.",
+      "calls": [
+        12,
+        13
+      ],
+      "recorded_at_call": 3,
+      "updated_at_call": 15
+    },
+    {
+      "id": "H2",
+      "text": "The `TypeError` occurs because `None` is passed to `_normalize` which then passes it to `canonicalize_name`. We can fix this by checking for `None` in `_evaluate_markers` before calling `_normalize`.",
+      "predicts": "If we modify `_evaluate_markers` to handle `None` values before calling `_normalize`, the `TypeError` will be avoided.",
+      "status": "rejected",
+      "evidence": "H1 was successfully implemented and verified. H2 is no longer needed.",
+      "calls": [
+        12,
+        13
+      ],
+      "recorded_at_call": 4,
+      "updated_at_call": 16
+    }
+  ],
+  "decision": "ready for human review"
+}

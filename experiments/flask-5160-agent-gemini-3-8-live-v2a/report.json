@@ -1,0 +1,103 @@
+{
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-live",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 27,
+    "seconds": 225.7,
+    "total_tokens": 234934
+  },
+  "root_cause": {
+    "function": "get_root_path and _find_package_path",
+    "file": "src/flask/helpers.py and src/flask/scaffold.py",
+    "mechanism": "Replacing pkgutil.get_loader with importlib.util.find_spec caused a ValueError when passing \"__main__\" because __main__.__spec__ is None in certain scripts.",
+    "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The regression was caused by replacing pkgutil.get_loader with importlib.util.find_spec in _find_package_path. importlib.util.find_spec raises ValueError when __main__.__spec__ is None, whereas pkgutil.get_loader handled it without raising an exception.",
+      "predicts": "Changing importlib.util.find_spec to pkgutil.get_loader in _find_package_path will fix the ValueError for __main__ and restore previous behavior.",
+      "status": "supported",
+      "evidence": "The change from pkgutil to importlib caused the regression. pkgutil handled __main__ without raising ValueError.",
+      "calls": [
+        8
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "We can catch the ValueError raised by importlib.util.find_spec when __main__.__spec__ is None and fallback to the same logic as when loader is None.",
+      "predicts": "Adding a try-except block around importlib.util.find_spec to catch ValueError and fallback to os.getcwd() will fix the issue.",
+      "status": "supported",
+      "evidence": "Applying try-except ValueError around importlib.util.find_spec in both scaffold.py and helpers.py resolved the ValueError when initializing Flask(\"__main__\").",
+      "calls": [
+        15,
+        22
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 8,
+      "tool": "git_show",
+      "args": {
+        "rev": "84e11a1e"
+      },
+      "excerpt": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0\nDavid Lord 2023-06-07\n\nuse importlib instead of pkgutil\n\n\ndiff --git a/CHANGES.rst b/CHANGES.rst\nindex 32ddd151..80652305 100644\n--- a/CHANGES.rst\n+++ b/CHANGES.rst\n@@ -3,6 +3,8 @@ Version 2.3.3\n \n Unreleased\n \n+-   Python 3.12 compatibility.\n+\n \n Version 2.3.2\n -------------\ndiff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 61a0f818..4e8bc8b8 "
+    },
+    {
+      "call": 15,
+      "tool": "apply_edit",
+      "args": {
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except ValueError:\n        spec = None\n\n    loader = spec.loader if spec is not None else None",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+        "path": "src/flask/scaffold.py"
+      },
+      "excerpt": "applied edit 1 to src/flask/scaffold.py. Run tests to check it."
+    },
+    {
+      "call": 22,
+      "tool": "apply_edit",
+      "args": {
+        "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except ValueError:\n        spec = None\n\n    loader = spec.loader if spec is not None else None",
+        "path": "src/flask/helpers.py",
+        "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None"
+      },
+      "excerpt": "applied edit 2 to src/flask/helpers.py. Run tests to check it."
+    },
+    {
+      "call": 23,
+      "tool": "run_python",
+      "args": {
+        "code": "from flask import Flask\nimport os\n\ndef test_main_app():\n    app = Flask(\"__main__\")\n    print(\"Instance path:\", app.instance_path)\n\nif __name__ == \"__main__\":\n    test_main_app()\n"
+      },
+      "excerpt": "[exit 0]\nInstance path: /work/instance\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except ValueError:\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+      },
+      {
+        "path": "src/flask/helpers.py",
+        "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except ValueError:\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+      }
+    ],
+    "diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..4d1489eb 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,11 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except ValueError:\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..dead824f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,11 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except ValueError:\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "verification": [
+    {
+      "result": "Instance path: /work/instance",
+      "call": 23,
+      "command": "python test_script.py"
+    }
+  ],
+  "limitations": [
+    "The fix assumes that a ValueError from importlib.util.find_spec during module spec resolution should be treated as if the spec is not found, falling back to current working directory or other defaults, which matches the previous behavior with pkgutil.get_loader."
+  ],
+  "decision": "ready for human review"
+}

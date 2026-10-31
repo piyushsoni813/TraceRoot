@@ -1,0 +1,64 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)",
+      "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)"
+    }
+  ],
+  "report": {
+    "verification": [
+      {
+        "command": "run_python reproduction script",
+        "result": "TypeError: expected string or bytes-like object, got 'NoneType'",
+        "call": 5
+      },
+      {
+        "result": "False",
+        "command": "run_python reproduction script after fix",
+        "call": 20
+      },
+      {
+        "command": "run_tests tests/test_markers.py",
+        "call": 21,
+        "result": "2221 passed"
+      }
+    ],
+    "root_cause": {
+      "breaking_commit": "53dbb257e5fef150d32ef85c7427133d71651989",
+      "function": "_normalize",
+      "file": "src/packaging/markers.py",
+      "mechanism": "The _normalize function was introduced to normalize 'extra' marker values using canonicalize_name. However, it did not account for the case where 'extra' is passed as None in the environment, causing canonicalize_name to raise a TypeError because it expects a string."
+    },
+    "limitations": []
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The bug is caused by `_normalize` calling `canonicalize_name` on `None` when `extra` is `None` in the environment. This was introduced by commit 53dbb25 which added normalization for `extra`.",
+      "predicts": "The reproduction script will fail with TypeError. Modifying `src/packaging/markers.py` to handle `None` in `_normalize` will fix the issue.",
+      "status": "supported",
+      "evidence": "The reproduction script confirms the TypeError. Git history shows that commit 53dbb25 introduced _normalize which calls canonicalize_name. When extra is None, canonicalize_name fails.",
+      "calls": [
+        5,
+        13
+      ],
+      "recorded_at_call": 14,
+      "updated_at_call": 17
+    },
+    {
+      "id": "H2",
+      "text": "The bug is caused by `canonicalize_name` not handling `None` input. Although `_normalize` passes the value, `canonicalize_name` should be robust.",
+      "predicts": "The reproduction script will fail with TypeError. Modifying `src/packaging/utils.py` to handle `None` in `canonicalize_name` will fix the issue.",
+      "status": "rejected",
+      "evidence": "canonicalize_name is defined to take a str, so passing None is incorrect usage by the caller. Fixing it in markers.py is more appropriate.",
+      "calls": [
+        5,
+        4
+      ],
+      "recorded_at_call": 15,
+      "updated_at_call": 18
+    }
+  ],
+  "decision": "ready for human review"
+}

@@ -1,0 +1,187 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 25,
+    "unverifiable": 3,
+    "contradicted": 1
+  },
+  "total": 29,
+  "verified_fraction": 0.862,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 18 is run_python with output",
+      "ref": "H1 -> call 18"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 19 is run_python with output",
+      "ref": "H1 -> call 19"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 18 is run_python with output",
+      "ref": "H2 -> call 18"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 19 is run_python with output",
+      "ref": "H2 -> call 19"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "cited call is not a test or script run",
+      "ref": "verification[0] -> call 19"
+    },
+    {
+      "kind": "verification",
+      "status": "contradicted",
+      "detail": "claimed 13 passed but the output shows no counts",
+      "ref": "verification[1] -> call 27"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "command does not name the tests that were run",
+      "ref": "verification[2] -> call 28"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`attrs = field_transformer(cls, attrs)` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_all_after_dag_id_to_kw_only` appears in the transcript",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`AttrsClass(attrs)` appears in the transcript",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`AttrsClass(attrs)` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Base attrs: ()` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`AttrsClass(attrs)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_all_after_dag_id_to_kw_only` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`f.evolve(...)` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Base.__attrs_attrs__` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`AttrsClass(attrs)` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_make_attr_tuple_class` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/attr/_make.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

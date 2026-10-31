@@ -1,0 +1,21 @@
+{
+  "outcome": "submitted",
+  "tool_calls": 30,
+  "model_calls": 26,
+  "seconds": 59.6,
+  "active_seconds": 59.6,
+  "waited_seconds": 0.0,
+  "models_used": {
+    "gemini-3.1-flash-live-preview": 26
+  },
+  "total_tokens": 0,
+  "last_context_tokens": 0,
+  "report_valid": true,
+  "report_errors": [],
+  "evidence_passed": false,
+  "evidence_counts": {
+    "verified": 14,
+    "unverifiable": 2,
+    "contradicted": 0
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "edits": [
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file",
+      "replace": "        sig = inspect.signature(cls.__init__)\n        parameters = list(sig.parameters.values())\n        if parameters and parameters[0].name == \"self\":\n            parameters = parameters[1:]\n\n        param_names = {p.name for p in parameters}\n        has_var_keyword = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in parameters)\n        has_var_positional = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in parameters)\n\n        init_params = {key: value for key, value in all_params.items() if key in param_names or has_var_keyword}\n        if parameters and not has_var_positional:\n            first_param = parameters[0]\n            if first_param.name != \"lock_file\" and first_param.name not in init_params:\n                init_params[first_param.name] = lock_file\n            elif \"lock_file\" in param_names:\n                init_params[\"lock_file\"] = lock_file"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "mechanism": "FileLockMeta.__call__ inspected `cls.__init__` parameters and forced `init_params[\"lock_file\"] = lock_file`, causing subclasses whose first parameter is named differently (e.g. `file_path`) to receive an unexpected keyword argument `lock_file` instead of their expected first parameter name.",
+      "function": "FileLockMeta.__call__",
+      "file": "src/filelock/_api.py"
+    },
+    "limitations": [
+      "virtualenv package is not installed in the test environment so test_virtualenv.py cannot run, but the standard filelock tests pass successfully."
+    ],
+    "verification": [
+      {
+        "result": "True\n/tmp/tmprq33ctfz/a.lock",
+        "call": 28,
+        "command": "python -c \"import tempfile; from filelock import FileLock; ...; lock = FilePathLock(path)\""
+      },
+      {
+        "result": "86 passed, 20 skipped in 9.68s",
+        "call": 31,
+        "command": "pytest tests/test_filelock.py"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "H1: FileLockMeta.__call__ filters parameters based on `inspect.signature(cls.__init__)`, but when a subclass defines its `__init__` with a different first parameter name (e.g. `file_path` instead of `lock_file`), `lock_file` is not in `present_params`. Then line 135 forces `init_params[\"lock_file\"] = lock_file`, which gets passed as a keyword argument `lock_file=...` to `__init__`, but `__init__` expects `file_path=...` (or positional).",
+      "predicts": "If present_params filters out keyword arguments passed to super().__init__ or if subclasses with differently named first parameters map arguments via inspect.signature or positional argument forwarding, then inspecting cls.__init__ directly on a subclass whose first parameter is named file_path fails because key 'lock_file' is not in present_params (or vice versa, or keyword argument mapping breaks).",
+      "status": "supported",
+      "evidence": "Running the user's reproduction snippet or similar test shows TypeError: FilePathLock.__init__() got an unexpected keyword argument 'lock_file' because `lock_file` is passed as keyword argument to `__init__`, but `FilePathLock.__init__(self, file_path)` expects `file_path`.",
+      "calls": [
+        5,
+        8
+      ],
+      "recorded_at_call": 7,
+      "updated_at_call": 10
+    },
+    {
+      "id": "H2",
+      "text": "H2: Alternatively, `FileLockMeta.__call__` receives `lock_file` as the first parameter positionally or as keyword argument `lock_file`, but passes `**init_params` where `lock_file` is explicitly passed as keyword argument `lock_file` regardless of what name `cls.__init__` uses for its first parameter.",
+      "predicts": "If the issue is due to `lock_file` being forced as a keyword argument when `__init__` expects `file_path`, then passing `file_path` (or binding arguments via `inspect.signature().bind(*args, **kwargs)` or mapping the first parameter) would fix it.",
+      "status": "supported",
+      "evidence": "`FileLockMeta.__call__` forces `init_params[\"lock_file\"] = lock_file`, passing `lock_file` keyword argument.",
+      "calls": [
+        5,
+        8
+      ],
+      "recorded_at_call": 8,
+      "updated_at_call": 11
+    }
+  ],
+  "decision": "ready for human review"
+}

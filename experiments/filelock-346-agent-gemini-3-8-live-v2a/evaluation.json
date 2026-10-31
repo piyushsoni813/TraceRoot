@@ -1,0 +1,22 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "filelock-346",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "no_submission",
+    "run_outcome": "budget_exhausted"
+  },
+  "root_cause": null,
+  "evidence": null,
+  "cost": {
+    "tool_calls": 40,
+    "model_calls": 41,
+    "total_tokens": 566404,
+    "seconds": 590.0,
+    "active_seconds": 108.9,
+    "waited_seconds": 481.1,
+    "models_used": {
+      "gemini-3.8-live": 41
+    }
+  }
+}

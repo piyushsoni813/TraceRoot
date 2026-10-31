@@ -1,0 +1,158 @@
+{
+  "case_id": "attrs-1416",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 31,
+    "seconds": 72.2,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "file": "src/attr/_make.py",
+    "function": "_transform_attrs",
+    "mechanism": "The `field_transformer` argument in `attrs.define` (and `attr.s`) allows a callable to transform the fields of a class. If this callable is a generator function, it returns an iterator. The code in `_transform_attrs` was using this iterator directly. However, the resulting `attrs` list was iterated over multiple times (e.g., to check order, resolve aliases, and create the attribute tuple class). The first iteration consumed the generator, leaving subsequent iterations empty. This led to incorrect class creation, especially for subclasses which would miss inherited attributes."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The `field_transformer` on `Base` modifies the fields, making `dag_id` positional and `has_default` keyword-only. When `Subclass` is defined, `_transform_attrs` collects `Base`'s fields. If `field_transformer` is NOT run on `Subclass`, it sees `dag_id` as positional. However, if `Subclass` also has fields, and `define()` defaults to `collect_by_mro=True`, the combination of inherited fields and new fields might be causing `dag_id` to be dropped from `__init__` arguments if it's not correctly handled during `__init__` generation. Specifically, if `dag_id` is somehow considered as not belonging to `Subclass`'s init signature.",
+      "predicts": "If I modify the reproducer to print `Subclass.__init__.__annotations__`, I will see that `dag_id` is missing from the arguments.",
+      "status": "rejected",
+      "evidence": "The fix in `src/attr/_make.py` resolved the issue, confirming that the problem was related to how `field_transformer` output was handled, rather than `dag_id` being dropped due to MRO issues with new fields.",
+      "calls": [
+        22,
+        24
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The `field_transformer` on `Base` works as expected. When `Subclass` is defined, it inherits attributes from `Base`. `_transform_attrs` calls `_collect_base_attrs`. If `_collect_base_attrs` somehow uses the *original* definitions of fields from `Base` instead of the transformed ones stored in `Base.__attrs_attrs__`, then `dag_id` would be positional. But the reproducer says `dag_id` is unexpected keyword argument. This means `dag_id` is NOT in `__init__` at all, or it is positional and we are passing it as keyword. Wait, `x = Subclass(dag_id=\"foo\", other=False)` should work if `dag_id` is positional. The error is `unexpected keyword argument 'dag_id'`. This means `dag_id` is NOT in `__init__` signature.\n\nRevised Hypothesis: The `field_transformer` on `Base` works. `Base.__init__` has `dag_id` (positional) and `has_default` (kw_only). When `Subclass` is defined, `_transform_attrs` collects base attributes. If `_collect_base_attrs` collects `dag_id` and `has_default`. And then `Subclass` adds `other`.\n\nIf `dag_id` is missing from `Subclass.__init__`, it means it was filtered out.\n\nLet's look at `_collect_base_attrs` in `src/attr/_make.py`:\n```python\n324\t    for base_cls in reversed(cls.__mro__[1:-1]):\n325\t        for a in getattr(base_cls, \"__attrs_attrs__\", []):\n326\t            if a.inherited or a.name in taken_attr_names:\n327\t                continue\n328\t\n329\t            a = a.evolve(inherited=True)  # noqa: PLW2901\n330\t            base_attrs.append(a)\n```\nIt reads `__attrs_attrs__` from base classes. `Base.__attrs_attrs__` should contain transformed fields.\n\nIf `dag_id` is missing from `Subclass.__init__`, maybe it's because `Subclass` definition somehow overrides it? In reproducer:\n```python\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n```\n`other` is the only own attribute. `taken_attr_names` will be `{'other'}`. `dag_id` is not in `taken_attr_names`.\n\nMaybe the issue is that `field_transformer` is NOT inherited, and `Subclass` definition process re-transforms fields in a way that drops `dag_id`? But `Subclass` doesn't have a `field_transformer`.\n\nIf `dag_id` is positional in `Subclass`, `Subclass(dag_id=\"foo\", other=False)` should work.\n\nIf `dag_id` is keyword-only in `Subclass`, `Subclass(dag_id=\"foo\", other=False)` should work.\n\nThe error `TypeError: Subclass.__init__() got an unexpected keyword argument 'dag_id'` strongly suggests `dag_id` is not in the signature.\n\nWhy would `dag_id` be missing?\n\nMaybe `Base` is not considered an attrs class when `Subclass` is being built?\n\nLet's check what `Base.__attrs_attrs__` contains.",
+      "predicts": "If I modify the reproducer to print `Base.__attrs_attrs__` and `Subclass.__attrs_attrs__`, I will see that `dag_id` has `kw_only=True` in `Subclass` but `kw_only=False` in `Base`.",
+      "status": "supported",
+      "evidence": "The reproducer fails as described. Investigation showed that when `field_transformer` is a generator, it is iterated over multiple times. The first iteration consumes it, leaving subsequent iterations empty. This causes `Base` to have no attributes, and `Subclass` to only have its own attributes, missing inherited ones. Converting the generator output to a list in `src/attr/_make.py` fixes the issue in the reproducer.",
+      "calls": [
+        2,
+        18,
+        19,
+        20,
+        21,
+        22,
+        24
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 2,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nSubclass.__init__() got an unexpected keyword argument 'dag_id'\n"
+    },
+    {
+      "call": 18,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in Base.__attrs_attrs__]}\")\nprint(f\"Base dag_id kw_only: {Base.__attrs_attrs__[0].kw_only}\")\nprint(f\"Base has_default kw_only: {Base.__attrs_attrs__[1].kw_only}\")\n\nprint(f\"Subclass fields: {[f.name for f in Subclass.__attrs_attrs__]}\")\n# Assuming order is dag_id, has_default, other\nprint(f\"Subclass dag_id kw_only: {Subclass.__attrs_attrs__[0].kw_only}\")\n\nimport inspect\nprint(f\"Subclass init signature: {inspect.signature(Subclass)}\")\n"
+      },
+      "excerpt": "[exit 1]\nBase fields: []\nTraceback (most recent call last):\n  File \"<string>\", line 22, in <module>\n    print(f\"Base dag_id kw_only: {Base.__attrs_attrs__[0].kw_only}\")\n                                  ~~~~~~~~~~~~~~~~~~~~^^^\nIndexError: tuple index out of range\n"
+    },
+    {
+      "call": 19,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    i = iter(fields)\n    try:\n        f = next(i)\n    except StopIteration:\n        return fields\n        \n    if f.name != \"dag_id\":\n        # raise RuntimeError(\"dag_id was not the first field\")\n        print(f\"dag_id was not the first field in {cls.__name__}, it was {f.name}\")\n        yield f\n    else:\n        yield f\n        \n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in Base.__attrs_attrs__]}\")\nif Base.__attrs_attrs__:\n    print(f\"Base dag_id kw_only: {Base.__attrs_attrs__[0].kw_only}\")\n    print(f\"Base has_default kw_only: {Base.__attrs_attrs__[1].kw_only}\")\n\nprint(f\"Subclass fields: {[f.name for f in Subclass.__attrs_attrs__]}\")\nif Subclass.__attrs_attrs__:\n    # Assuming order is dag_id, has_default, other\n    print(f\"Subclass dag_id kw_only: {Subclass.__attrs_attrs__[0].kw_only}\")\n\nimport inspect\nprint(f\"Subclass init signature: {inspect.signature(Subclass)}\")\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nBase fields: []\nSubclass fields: ['other']\nSubclass dag_id kw_only: False\nSubclass init signature: (other: bool) -> None\n"
+    },
+    {
+      "call": 20,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    fields_list = list(fields)\n    print(f\"Input fields: {[f.name for f in fields_list]}\")\n    \n    i = iter(fields_list)\n    try:\n        f = next(i)\n    except StopIteration:\n        return\n        \n    if f.name != \"dag_id\":\n        print(f\"dag_id was not the first field in {cls.__name__}, it was {f.name}\")\n        yield f\n    else:\n        yield f\n        \n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in Base.__attrs_attrs__]}\")\nif Base.__attrs_attrs__:\n    print(f\"Base dag_id kw_only: {Base.__attrs_attrs__[0].kw_only}\")\n    print(f\"Base has_default kw_only: {Base.__attrs_attrs__[1].kw_only}\")\n\nprint(f\"Subclass fields: {[f.name for f in Subclass.__attrs_attrs__]}\")\nif Subclass.__attrs_attrs__:\n    # Assuming order is dag_id, has_default, other\n    print(f\"Subclass dag_id kw_only: {Subclass.__attrs_attrs__[0].kw_only}\")\n\nimport inspect\nprint(f\"Subclass init signature: {inspect.signature(Subclass)}\")\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nInput fields: ['dag_id', 'has_default']\nBase fields: []\nSubclass fields: ['other']\nSubclass dag_id kw_only: False\nSubclass init signature: (other: bool) -> None\n"
+    },
+    {
+      "call": 21,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    fields_list = list(fields)\n    print(f\"Input fields: {[f.name for f in fields_list]}\")\n    \n    def generator():\n        i = iter(fields_list)\n        try:\n            f = next(i)\n        except StopIteration:\n            return\n            \n        if f.name != \"dag_id\":\n            print(f\"dag_id was not the first field in {cls.__name__}, it was {f.name}\")\n            yield f\n        else:\n            yield f\n            \n        for f in i:\n            yield f.evolve(kw_only=True)\n            \n    return generator()\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in Base.__attrs_attrs__]}\")\nif Base.__attrs_attrs__:\n    print(f\"Base dag_id kw_only: {Base.__attrs_attrs__[0].kw_only}\")\n    print(f\"Base has_default kw_only: {Base.__attrs_attrs__[1].kw_only}\")\n\nprint(f\"Subclass fields: {[f.name for f in Subclass.__attrs_attrs__]}\")\nif Subclass.__attrs_attrs__:\n    # Assuming order is dag_id, has_default, other\n    print(f\"Subclass dag_id kw_only: {Subclass.__attrs_attrs__[0].kw_only}\")\n\nimport inspect\nprint(f\"Subclass init signature: {inspect.signature(Subclass)}\")\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nInput fields: ['dag_id', 'has_default']\nBase fields: []\nSubclass fields: ['other']\nSubclass dag_id kw_only: False\nSubclass init signature: (other: bool) -> None\n"
+    },
+    {
+      "call": 22,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    fields_list = list(fields)\n    print(f\"Input fields: {[f.name for f in fields_list]}\")\n    \n    result = []\n    i = iter(fields_list)\n    try:\n        f = next(i)\n    except StopIteration:\n        return []\n        \n    if f.name != \"dag_id\":\n        print(f\"dag_id was not the first field in {cls.__name__}, it was {f.name}\")\n        result.append(f)\n    else:\n        result.append(f)\n        \n    for f in i:\n        result.append(f.evolve(kw_only=True))\n            \n    return result\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in Base.__attrs_attrs__]}\")\nif Base.__attrs_attrs__:\n    print(f\"Base dag_id kw_only: {Base.__attrs_attrs__[0].kw_only}\")\n    print(f\"Base has_default kw_only: {Base.__attrs_attrs__[1].kw_only}\")\n\nprint(f\"Subclass fields: {[f.name for f in Subclass.__attrs_attrs__]}\")\nif len(Subclass.__attrs_attrs__) > 0:\n    # Assuming order is dag_id, has_default, other\n    print(f\"Subclass dag_id kw_only: {Subclass.__attrs_attrs__[0].kw_only}\")\n\nimport inspect\nprint(f\"Subclass init signature: {inspect.signature(Subclass)}\")\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nInput fields: ['dag_id', 'has_default']\nBase fields: ['dag_id', 'has_default']\nBase dag_id kw_only: False\nBase has_default kw_only: True\nSubclass fields: ['dag_id', 'has_default', 'other']\nSubclass dag_id kw_only: False\nSubclass init signature: (dag_id: str, other: bool, *, has_default: str = 'default') -> None\nSubclass(dag_id='foo', has_default='default', oth"
+    },
+    {
+      "call": 24,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nSubclass(dag_id='foo', has_default='default', other=False)\n"
+    },
+    {
+      "call": 27,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_make.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [ 27%]\n........................................................................ [ 54%]\n........................................................................ [ 82%]\n.......................................s.......                          [100%]\n=========================== short test summary info ==================="
+    },
+    {
+      "call": 28,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_next_gen.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n.................................                                        [100%]\n33 passed in 0.24s\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/attr/_make.py",
+        "search": "    if field_transformer is not None:\n        attrs = field_transformer(cls, attrs)\n",
+        "replace": "    if field_transformer is not None:\n        attrs = list(field_transformer(cls, attrs))\n"
+      }
+    ],
+    "diff": "diff --git a/src/attr/_make.py b/src/attr/_make.py\nindex 7439dc2..41bc412 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -448,7 +448,7 @@ def _transform_attrs(\n     attrs = base_attrs + own_attrs\n \n     if field_transformer is not None:\n-        attrs = field_transformer(cls, attrs)\n+        attrs = list(field_transformer(cls, attrs))\n \n     # Check attr order after executing the field_transformer.\n     # Mandatory vs non-mandatory attr order only matters when they are part of\n"
+  },
+  "verification": [
+    {
+      "result": "TypeError: Subclass.__init__() got an unexpected keyword argument 'dag_id'",
+      "call": 2,
+      "command": "run_python reproducer.py"
+    },
+    {
+      "result": "Subclass(dag_id='foo', has_default='default', other=False)",
+      "command": "run_python reproducer.py",
+      "call": 24
+    },
+    {
+      "call": 27,
+      "result": "262 passed, 1 skipped",
+      "command": "run_tests tests/test_make.py"
+    },
+    {
+      "command": "run_tests tests/test_next_gen.py",
+      "result": "33 passed",
+      "call": 28
+    }
+  ],
+  "limitations": [
+    "Some tests in tests/test_packaging.py failed, but these failures seem unrelated to the change and are likely due to the test environment lacking package metadata for 'attrs'. Existing tests related to class creation (test_make.py, test_next_gen.py) passed."
+  ],
+  "decision": "ready for human review"
+}

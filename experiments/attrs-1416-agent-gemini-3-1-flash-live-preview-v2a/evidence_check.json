@@ -1,0 +1,325 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 50,
+    "unverifiable": 2,
+    "contradicted": 0
+  },
+  "total": 52,
+  "verified_fraction": 0.962,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 22 is run_python with output",
+      "ref": "H1 -> call 22"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 24 is run_python with output",
+      "ref": "H1 -> call 24"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 2 is run_python with output",
+      "ref": "H2 -> call 2"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 18 is run_python with output",
+      "ref": "H2 -> call 18"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 19 is run_python with output",
+      "ref": "H2 -> call 19"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 20 is run_python with output",
+      "ref": "H2 -> call 20"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 21 is run_python with output",
+      "ref": "H2 -> call 21"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 22 is run_python with output",
+      "ref": "H2 -> call 22"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 24 is run_python with output",
+      "ref": "H2 -> call 24"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "call 2 ran before the last edit (call 23)",
+      "ref": "verification[0] -> call 24"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 24 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 2"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 27 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[2] -> call 24"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 28 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[3] -> call 27"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`attrs.define` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`src/attr/_make.py` appears in the transcript",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`src/attr/_make.py` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`collect_by_mro=True` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_collect_base_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_collect_base_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Base.__attrs_attrs__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`x = Subclass(dag_id=\"foo\", other=False)` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`unexpected keyword argument 'dag_id'` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`Base.__init__` appears nowhere in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_collect_base_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Subclass.__init__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_collect_base_attrs` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`src/attr/_make.py` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`__attrs_attrs__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Base.__attrs_attrs__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Subclass.__init__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`taken_attr_names` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`taken_attr_names` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Subclass(dag_id=\"foo\", other=False)` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Subclass(dag_id=\"foo\", other=False)` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`TypeError: Subclass.__init__() got an unexpected keyword arg` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Base.__attrs_attrs__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/attr/_make.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

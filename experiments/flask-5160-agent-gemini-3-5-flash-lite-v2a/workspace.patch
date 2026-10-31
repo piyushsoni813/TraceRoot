@@ -1,0 +1,45 @@
+diff --git a/src/flask/helpers.py b/src/flask/helpers.py
+index 4e8bc8b8..120bdc1b 100644
+--- a/src/flask/helpers.py
++++ b/src/flask/helpers.py
+@@ -575,7 +575,10 @@ def get_root_path(import_name: str) -> str:
+         return os.path.dirname(os.path.abspath(mod.__file__))
+ 
+     # Next attempt: check the loader.
+-    spec = importlib.util.find_spec(import_name)
++    try:
++        spec = importlib.util.find_spec(import_name)
++    except (ImportError, ValueError):
++        spec = None
+     loader = spec.loader if spec is not None else None
+ 
+     # Loader does not exist or we're referring to an unloaded main
+diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py
+index 3c23ef97..ab603a2e 100644
+--- a/src/flask/scaffold.py
++++ b/src/flask/scaffold.py
+@@ -832,7 +832,10 @@ def _find_package_path(import_name):
+     else:
+         # namespace package
+         if root_spec.origin in {"namespace", None}:
+-            package_spec = importlib.util.find_spec(import_name)
++            try:
++                package_spec = importlib.util.find_spec(import_name)
++            except (ImportError, ValueError):
++                package_spec = None
+             if package_spec is not None and package_spec.submodule_search_locations:
+                 # Pick the path in the namespace that contains the submodule.
+                 package_path = pathlib.Path(
+@@ -855,7 +858,11 @@ def _find_package_path(import_name):
+             return os.path.dirname(root_spec.origin)
+ 
+     # we were unable to find the `package_path` using PEP 451 loaders
+-    spec = importlib.util.find_spec(root_mod_name)
++    try:
++        spec = importlib.util.find_spec(root_mod_name)
++    except (ImportError, ValueError):
++        spec = None
++
+     loader = spec.loader if spec is not None else None
+ 
+     if loader is None or root_mod_name == "__main__":

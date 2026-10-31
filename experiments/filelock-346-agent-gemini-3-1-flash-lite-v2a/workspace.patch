@@ -1,0 +1,39 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..5268ff8 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -119,22 +119,18 @@ class FileLockMeta(ABCMeta):
+         # E.g. virtualenv changes the signature of the `__init__` method in the `BaseFileLock` class descendant
+         # (https://github.com/tox-dev/filelock/pull/340)
+ 
+-        all_params = {
+-            "lock_file": lock_file,
+-            "timeout": timeout,
+-            "mode": mode,
+-            "thread_local": thread_local,
+-            "blocking": blocking,
+-            "is_singleton": is_singleton,
+-            **kwargs,
+-        }
+-
+-        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+-        init_params = {key: value for key, value in all_params.items() if key in present_params}
+-        # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
+-
+-        instance = super().__call__(**init_params)
++        instance = cls.__new__(cls)
++
++        # We need to pass lock_file as the first argument to __init__
++        # and the rest as keyword arguments.
++        # This is what super().__call__ would do if we called it with positional args.
++        # But we want to support subclasses that have different signatures.
++        
++        # The original FileLockMeta.__call__ was:
++        # instance = super().__call__(**init_params)
++        
++        # If we call instance.__init__(lock_file, **kwargs), it should work for most cases.
++        instance.__init__(lock_file, **kwargs)
+ 
+         if is_singleton:
+             cls._instances[str(lock_file)] = instance  # type: ignore[attr-defined]

@@ -1,0 +1,13 @@
+diff --git a/src/packaging/markers.py b/src/packaging/markers.py
+index a5bf35c..fa2454e 100644
+--- a/src/packaging/markers.py
++++ b/src/packaging/markers.py
+@@ -121,7 +121,7 @@ def _normalize(*values: str, key: str) -> Tuple[str, ...]:
+     # > When comparing extra names, tools MUST normalize the names being
+     # > compared using the semantics outlined in PEP 503 for names
+     if key == "extra":
+-        return tuple(canonicalize_name(v) for v in values)
++        return tuple(canonicalize_name(v) if v is not None else "" for v in values)
+ 
+     # other environment markers don't have such standards
+     return values

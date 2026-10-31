@@ -194,12 +194,15 @@ class GeminiClient:
             attempt += 1
             self._pace(model)
             req = urllib.request.Request(url, body, {"Content-Type": "application/json", "x-goog-api-key": self.key})
+            sent = time.time()
             try:
                 raw = urllib.request.urlopen(req, timeout=300).read()
                 d = json.loads(raw)
                 self._last_tokens[model] = (d.get("usageMetadata") or {}).get("promptTokenCount", 0)
                 return d, attempt
             except urllib.error.HTTPError as e:
+                # a failed request is the service's time, not the agent's: count how long it hung as waiting
+                self.waited += time.time() - sent
                 detail = e.read().decode("utf-8", "replace")[:500]
                 if e.code == 429 and "per day" in detail:  # a daily quota will not clear by waiting
                     raise DailyQuotaError(f"HTTP 429 (daily quota, {model}): {detail}")
@@ -216,6 +219,7 @@ class GeminiClient:
                     continue
                 raise ApiError(f"HTTP {e.code} ({model}): {detail}")
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                self.waited += time.time() - sent
                 if attempt < MAX_API_ATTEMPTS:
                     self.log("api_retry", attempt=attempt, status="network", model=model, detail=str(e)[:300])
                     self._sleep(min(60, 2 ** attempt))

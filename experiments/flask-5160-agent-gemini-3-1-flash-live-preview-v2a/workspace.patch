@@ -1,0 +1,67 @@
+diff --git a/src/flask/helpers.py b/src/flask/helpers.py
+index 4e8bc8b8..f370e61e 100644
+--- a/src/flask/helpers.py
++++ b/src/flask/helpers.py
+@@ -575,7 +575,15 @@ def get_root_path(import_name: str) -> str:
+         return os.path.dirname(os.path.abspath(mod.__file__))
+ 
+     # Next attempt: check the loader.
+-    spec = importlib.util.find_spec(import_name)
++    if import_name == "__main__":
++        spec = None
++    else:
++        try:
++            spec = importlib.util.find_spec(import_name)
++        except ValueError:
++            # __main__.__spec__ is None
++            spec = None
++
+     loader = spec.loader if spec is not None else None
+ 
+     # Loader does not exist or we're referring to an unloaded main
+diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py
+index 3c23ef97..4343827f 100644
+--- a/src/flask/scaffold.py
++++ b/src/flask/scaffold.py
+@@ -817,15 +817,21 @@ def _find_package_path(import_name):
+     """Find the path that contains the package or module."""
+     root_mod_name, _, _ = import_name.partition(".")
+ 
+-    try:
+-        root_spec = importlib.util.find_spec(root_mod_name)
++    if root_mod_name == "__main__":
++        root_spec = None
++    else:
++        try:
++            root_spec = importlib.util.find_spec(root_mod_name)
++        except ValueError:
++            # __main__.__spec__ is None
++            root_spec = None
+ 
++    try:
+         if root_spec is None:
+             raise ValueError("not found")
+     # ImportError: the machinery told us it does not exist
+     # ValueError:
+     #    - the module name was invalid
+-    #    - the module name is __main__
+     #    - *we* raised `ValueError` due to `root_spec` being `None`
+     except (ImportError, ValueError):
+         pass  # handled below
+@@ -855,7 +861,15 @@ def _find_package_path(import_name):
+             return os.path.dirname(root_spec.origin)
+ 
+     # we were unable to find the `package_path` using PEP 451 loaders
+-    spec = importlib.util.find_spec(root_mod_name)
++    if root_mod_name == "__main__":
++        spec = None
++    else:
++        try:
++            spec = importlib.util.find_spec(root_mod_name)
++        except ValueError:
++            # __main__.__spec__ is None
++            spec = None
++
+     loader = spec.loader if spec is not None else None
+ 
+     if loader is None or root_mod_name == "__main__":

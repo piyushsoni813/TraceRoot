@@ -1,0 +1,63 @@
+{
+  "edits": [
+    {
+      "path": "src/attr/_make.py",
+      "search": "    if field_transformer is not None:\n        attrs = field_transformer(cls, attrs)",
+      "replace": "    if field_transformer is not None:\n        attrs = list(field_transformer(cls, attrs))"
+    }
+  ],
+  "report": {
+    "limitations": [],
+    "root_cause": {
+      "file": "src/attr/_make.py",
+      "mechanism": "When a generator function is passed as a `field_transformer`, it returns a generator iterator. Previously, `attrs = field_transformer(cls, attrs)` assigned the generator directly to `attrs`. When `attrs` was iterated multiple times (or first consumed when checking attribute orders / converting to `AttrsClass` / collecting base attributes by subclasses), the generator iterator was exhausted, resulting in empty attributes and unexpected initialization errors. Wrapping the result of `field_transformer` in `list(...)` ensures that generator-based field transformers can be iterated safely multiple times.",
+      "function": "_transform_attrs"
+    },
+    "verification": [
+      {
+        "call": 27,
+        "result": "Subclass(dag_id='foo', has_default='default', other=False)",
+        "command": "python reproducer snippet"
+      },
+      {
+        "command": "pytest tests/test_hooks.py",
+        "call": 28,
+        "result": "13 passed in 0.06s"
+      },
+      {
+        "call": 29,
+        "result": "262 passed, 1 skipped in 4.69s",
+        "command": "pytest tests/test_make.py"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "H1: When field_transformer returns a list of attributes, what happens to AttrsClass / Base.__attrs_attrs__? Wait, Base.__attrs_attrs__ above printed `Base attrs: ()`! Why did it print `()`? Because `AttrsClass(attrs)` was called with `attrs` being empty or something? Wait, no, `attrs` in `_transform_attrs` was empty or `field_transformer` yielded nothing? Wait, in my test snippet above, `_all_after_dag_id_to_kw_only` yielded `f` and then `f.evolve(...)`. Why did `Base.__attrs_attrs__` evaluate to `()`?",
+      "predicts": "If Base.__attrs_attrs__ is a subclass of tuple created by _make_attr_tuple_class, when Subclass inherits from Base, _collect_base_attrs iterates over Base.__attrs_attrs__ and checks `a.inherited`. Wait, why are attrs empty or missing? Let's check what `Base.__attrs_attrs__` actually contains!",
+      "status": "supported",
+      "evidence": "Confirmed H1/H2: generator yielded by generator function `_all_after_dag_id_to_kw_only` is consumed by `AttrsClass(attrs)` (or earlier checks), leaving `attrs` empty when Base is finalized or when inherited.",
+      "calls": [
+        18,
+        19
+      ],
+      "recorded_at_call": 16,
+      "updated_at_call": 21
+    },
+    {
+      "id": "H2",
+      "text": "H2: A generator function yields an iterator, which when passed to `AttrsClass(attrs)` (a tuple subclass) or similar, gets consumed or behaves unexpectedly because generators can only be iterated once or `_make_attr_tuple_class` expects a sized sequence/list. Wait, previously how was `field_transformer` handled? Let's check git history of `_transform_attrs`.",
+      "predicts": "If `field_transformer` returns a generator or iterator instead of a list, `AttrsClass(attrs)` consumes the iterator or fails because an iterator is not a sequence / tuple or gets consumed once. `_make_attr_tuple_class` or `AttrsClass` expects a sequence, but `field_transformer` returned a generator function (which returns a generator iterator), and `AttrsClass(attrs)` consumes the generator or iterates over it, and then what? Wait, `AttrsClass` is a tuple subclass. `TupleClass(generator)` creates an empty tuple if not careful, or raises, or consumes it. Wait! Let's check how `AttrsClass` (created by `_make_attr_tuple_class`) handles iterators/generators!",
+      "status": "supported",
+      "evidence": "Passing a generator (iterator) to AttrsClass (a tuple subclass) consumes the generator on the first call (when Base is created), leaving it empty for subsequent uses or if inspected/iterated again. Also, `field_transformer` docs state it returns a list or iterable of Attributes. But `AttrsClass(attrs)` consumes `attrs` if it's a generator! Wait, let's check what `_transform_attrs` does with `attrs`.",
+      "calls": [
+        18,
+        19
+      ],
+      "recorded_at_call": 17,
+      "updated_at_call": 20
+    }
+  ],
+  "decision": "ready for human review"
+}

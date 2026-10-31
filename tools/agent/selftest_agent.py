@@ -314,6 +314,18 @@ try:
     check("a busy single model raises ModelBusyError", False)
 except agent.ModelBusyError:
     check("a busy single model raises ModelBusyError", True)
+# a failed request that hangs before its 503 counts as waiting, not as the agent's time
+hang = {"n": 0}
+def hanging_open(req, timeout=0):
+    hang["n"] += 1
+    if hang["n"] == 1:
+        clock.now += 50.0          # the service hung for 50 s, then answered 503
+        raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, io.BytesIO(b'{"error":{"message":"high demand"}}'))
+    return Resp(json.dumps(response([fc("list_dir")])).encode())
+agent.urllib.request.urlopen = hanging_open
+hc = agent.GeminiClient("hang-model", lambda e, **kw: None)
+hc.generate("sys", signed)
+check("time spent in a failed request is counted as waiting", 52.0 <= hc.waited <= 53.0, hc.waited)
 # every model out of quota raises
 agent.urllib.request.urlopen = lambda req, timeout=0: (_ for _ in ()).throw(urllib.error.HTTPError(req.full_url, 429, "q", {}, io.BytesIO(b'{"error":{"message":"requests per day limit exceeded"}}')))
 allout = agent.GeminiClient("m1,m2", lambda e, **kw: None)

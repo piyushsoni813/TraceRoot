@@ -1,0 +1,60 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except ValueError:\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    },
+    {
+      "path": "src/flask/helpers.py",
+      "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except ValueError:\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "function": "get_root_path and _find_package_path",
+      "file": "src/flask/helpers.py and src/flask/scaffold.py",
+      "mechanism": "Replacing pkgutil.get_loader with importlib.util.find_spec caused a ValueError when passing \"__main__\" because __main__.__spec__ is None in certain scripts.",
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+    },
+    "limitations": [
+      "The fix assumes that a ValueError from importlib.util.find_spec during module spec resolution should be treated as if the spec is not found, falling back to current working directory or other defaults, which matches the previous behavior with pkgutil.get_loader."
+    ],
+    "verification": [
+      {
+        "result": "Instance path: /work/instance",
+        "call": 23,
+        "command": "python test_script.py"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The regression was caused by replacing pkgutil.get_loader with importlib.util.find_spec in _find_package_path. importlib.util.find_spec raises ValueError when __main__.__spec__ is None, whereas pkgutil.get_loader handled it without raising an exception.",
+      "predicts": "Changing importlib.util.find_spec to pkgutil.get_loader in _find_package_path will fix the ValueError for __main__ and restore previous behavior.",
+      "status": "supported",
+      "evidence": "The change from pkgutil to importlib caused the regression. pkgutil handled __main__ without raising ValueError.",
+      "calls": [
+        8
+      ],
+      "recorded_at_call": 12,
+      "updated_at_call": 26
+    },
+    {
+      "id": "H2",
+      "text": "We can catch the ValueError raised by importlib.util.find_spec when __main__.__spec__ is None and fallback to the same logic as when loader is None.",
+      "predicts": "Adding a try-except block around importlib.util.find_spec to catch ValueError and fallback to os.getcwd() will fix the issue.",
+      "status": "supported",
+      "evidence": "Applying try-except ValueError around importlib.util.find_spec in both scaffold.py and helpers.py resolved the ValueError when initializing Flask(\"__main__\").",
+      "calls": [
+        15,
+        22
+      ],
+      "recorded_at_call": 13,
+      "updated_at_call": 25
+    }
+  ],
+  "decision": "ready for human review"
+}

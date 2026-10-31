@@ -16,9 +16,9 @@ DRIVERS = [  # (label, slug, attempt per case; later attempts replace earlier on
 ]
 
 
-def runs(case, slug):
+def runs(case, slug, pat="?"):
     out = []
-    for d in sorted(glob.glob(f"{ROOT}/experiments/{case}-agent-{slug}-?")):
+    for d in sorted(glob.glob(f"{ROOT}/experiments/{case}-agent-{slug}-{pat}")):
         if os.path.exists(f"{d}/evaluation.json"):  # finished and scored; runs in progress are left out
             out.append((d[-1], d))
     return out
@@ -45,8 +45,8 @@ def why(d, res):
     return res["outcome"]
 
 
-def cell(case, slug):
-    rs = runs(case, slug)
+def cell(case, slug, pat="?"):
+    rs = runs(case, slug, pat)
     if not rs:
         return "not run yet", None
     att, d = rs[-1]
@@ -62,24 +62,31 @@ def cell(case, slug):
     return why(d, res) + tag, False
 
 
-lines = ["| Driver | " + " | ".join(CASES) + " | Solved |", "| --- |" + " --- |" * (len(CASES) + 1)]
-solved_by_case = {c: [] for c in CASES}
-for label, slug in DRIVERS:
-    cells, n, tried = [], 0, 0
-    for c in CASES:
-        text, ok = cell(c, slug)
-        cells.append(text)
-        if ok is not None and "not run" not in text:
-            tried += 1
-        if ok:
-            n += 1
-            solved_by_case[c].append(label)
-    lines.append(f"| {label} | " + " | ".join(cells) + f" | {n}/5 |")
-table = "\n".join(lines)
+def build(drivers, pat):
+    lines = ["| Driver | " + " | ".join(CASES) + " | Solved |", "| --- |" + " --- |" * (len(CASES) + 1)]
+    solved = {c: [] for c in CASES}
+    for label, slug in drivers:
+        cells, n = [], 0
+        for c in CASES:
+            text, ok = cell(c, slug, pat)
+            cells.append(text)
+            if ok:
+                n += 1
+                solved[c].append(label)
+        lines.append(f"| {label} | " + " | ".join(cells) + f" | {n}/5 |")
+    return "\n".join(lines), solved
+
+
+table, solved_by_case = build(DRIVERS, "?")
 union = sum(1 for c in CASES if solved_by_case[c])
+DRIVERS_V2 = [d for d in DRIVERS if not d[1].startswith("gemini-3-8-flash+")]
+table_v2, solved_v2 = build(DRIVERS_V2, "v2?")
+union_v2 = sum(1 for c in CASES if solved_v2[c])
 checkers = sorted({json.load(open(f)).get("checker_commit", "?") for f in glob.glob(f"{ROOT}/experiments/*-agent-*/evidence_check.json")})
 print(table)
 print("cases solved by at least one driver:", union)
+print(table_v2)
+print("v2 cases solved by at least one driver:", union_v2)
 
 section = f"""## Investigator agent results (separate from the baseline tables above)
 
@@ -107,6 +114,28 @@ Reruns and exclusions (every attempt is kept in `experiments/`; the table shows 
   as the end of the run instead of nudging, a harness weakness to fix in the next protocol version.
 - Gemini 3.8 Live Extended Thinking was dropped: it answered in speech and made no tool calls (all five `a` runs).
 - The very first run (filelock, Gemini 3.5 Flash) stopped on the 20 request daily quota after 22 calls, before any edit.
+
+### Protocol v2 (checkpoint guidance)
+
+Same agent, budget, prompt and evaluator. v2 only adds three messages to the tool result notice: a hypothesis checkpoint at
+call 15, a repair checkpoint at call 25, and a guard after three failing edit/test cycles (see `docs/budget-analysis.md`).
+Run folders end in `-v2a`. One attempt per cell, 2026-10-31.
+
+{table_v2}
+
+Cases solved by at least one v2 driver: {union_v2} of 5.
+
+Notes on v2:
+- Gemini 3.1 Flash Live went from 4 to 5 of 5; attrs was solved after the hypothesis checkpoint fired at call 15.
+- Gemini 3.5 Flash Lite went from 3 to 4 of 5; filelock was solved after the repair checkpoint fired at call 25.
+- Gemini 3.8 Live stayed at 2 of 5. On filelock it made 11 edits but checked them with `run_python`, not `run_tests`, so the
+  thrash guard (which counts failing `run_tests` only) never fired. A gap in v2.
+- Gemini 3.1 Flash Lite fell from 3 to 1 of 5, but three of its four failures were caused by the service: HTTP 503 on 17 to 18
+  requests, single replies taking up to 585 s. packaging stopped on 503; filelock and attrs ran out of active time because a
+  failed request's hanging time was counted as the agent's time. That harness bug is fixed (the time is now counted as
+  waiting); these three cells need a rerun before v2 can be judged on this driver.
+- Two v2 reports have a `contradicted` verification: Gemini 3.5 Flash Lite cited call numbers one off from the output it
+  quoted (for example it quoted the result of call 28 under call 31).
 
 Limits of these results:
 - Five public bugs, one counted attempt per cell. Indicative only; the models may have seen these fixes in training.

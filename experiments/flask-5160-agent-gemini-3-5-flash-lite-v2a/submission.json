@@ -1,0 +1,72 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    },
+    {
+      "path": "src/flask/helpers.py",
+      "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except (ImportError, ValueError):\n        spec = None\n    loader = spec.loader if spec is not None else None"
+    },
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "        # namespace package\n        if root_spec.origin in {\"namespace\", None}:\n            package_spec = importlib.util.find_spec(import_name)\n            if package_spec is not None and package_spec.submodule_search_locations:",
+      "replace": "        # namespace package\n        if root_spec.origin in {\"namespace\", None}:\n            try:\n                package_spec = importlib.util.find_spec(import_name)\n            except (ImportError, ValueError):\n                package_spec = None\n            if package_spec is not None and package_spec.submodule_search_locations:"
+    }
+  ],
+  "report": {
+    "verification": [
+      {
+        "command": "pytest tests/test_helpers.py tests/test_basic.py tests/test_regression.py",
+        "result": "159 passed",
+        "call": 31
+      },
+      {
+        "call": 32,
+        "command": "python -c 'from flask import Flask; app = Flask(\"__main__\"); assert app.root_path; assert app.instance_path'",
+        "result": "All checks passed successfully!"
+      }
+    ],
+    "root_cause": {
+      "file": "src/flask/helpers.py and src/flask/scaffold.py",
+      "function": "get_root_path and _find_package_path",
+      "mechanism": "When using `import_name = \"__main__\"`, `importlib.util.find_spec` can raise `ValueError` (specifically `ValueError: __main__.__spec__ is None`) if `__main__.__spec__` is not set or None. Calls to `importlib.util.find_spec` in `get_root_path` and `_find_package_path` were not uniformly wrapped in `try...except (ImportError, ValueError):`, leading to unhandled `ValueError` when initializing Flask as a direct script."
+    },
+    "limitations": []
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "When import_name is '__main__', importlib.util.find_spec(root_mod_name) raises ValueError: __main__.__spec__ is None (because __main__.__spec__ can be None when running a script directly without a module spec or when __spec__ isn't set yet). In _find_package_path, ValueError is caught inside try...except (ImportError, ValueError): around root_spec = importlib.util.find_spec(root_mod_name), but later in _find_package_path, spec = importlib.util.find_spec(root_mod_name) is called *outside* the try-except block at line 858!",
+      "predicts": "Catching ValueError in addition to ImportError around importlib.util.find_spec in _find_package_path (and/or anywhere else find_spec is called with __main__ or arbitrary names) will prevent ValueError: __main__.__spec__ is None and allow falling back to cwd correctly.",
+      "status": "supported",
+      "evidence": "Line 821 wraps importlib.util.find_spec(root_mod_name) in try: root_spec = ... except (ImportError, ValueError):. But line 858 calls spec = importlib.util.find_spec(root_mod_name) without try...except (ImportError, ValueError), causing ValueError: __main__.__spec__ is None when root_mod_name is '__main__'.",
+      "calls": [
+        3,
+        4,
+        8,
+        9
+      ],
+      "recorded_at_call": 10,
+      "updated_at_call": 12
+    },
+    {
+      "id": "H2",
+      "text": "The second find_spec call at line 858 in src/flask/scaffold.py calls importlib.util.find_spec(root_mod_name) without a try...except ValueError wrapper (unlike line 821 which has try...except (ImportError, ValueError)). When root_mod_name is '__main__', line 858 raises ValueError: __main__.__spec__ is None.",
+      "predicts": "Checking if root_mod_name == '__main__' or catching ValueError around all find_spec calls (or using try/except ValueError, ImportError around find_spec) will fix the issue.",
+      "status": "supported",
+      "evidence": "Line 858 is outside the try block, so when root_mod_name == '__main__', find_spec raises ValueError.",
+      "calls": [
+        3,
+        4,
+        8,
+        9
+      ],
+      "recorded_at_call": 11,
+      "updated_at_call": 13
+    }
+  ],
+  "decision": "ready for human review"
+}

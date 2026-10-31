@@ -1,0 +1,157 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 17,
+    "unverifiable": 7,
+    "contradicted": 0
+  },
+  "total": 24,
+  "verified_fraction": 0.708,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H1 -> call 11"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H2 -> call 11"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "call 30 ran before the last edit (call 33)",
+      "ref": "verification[0] -> call 11"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 34 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 30"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 37 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[2] -> call 34"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`pkgutil.get_loader` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`sys.modules[\"__main__\"].__spec__` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`importlib.util.find_spec(\"__main__\")` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`ValueError: __main__.__spec__ is None` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Flask(__name__)` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`pkgutil.get_loader(root_mod_name)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`root_mod_name` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`sys.modules[\"__main__\"].__spec__` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`pkgutil.get_loader(\"__main__\")` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`root_mod_name` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`sys.modules[\"__main__\"].__spec__` appears nowhere in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`pkgutil.get_loader` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0 appears in a git output",
+      "ref": "root_cause.breaking_commit"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "unverifiable",
+      "detail": "src/flask/scaffold.py, src/flask/helpers.py was never opened or found by a search",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

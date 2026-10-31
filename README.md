@@ -180,6 +180,33 @@ Reruns and exclusions (every attempt is kept in `experiments/`; the table shows 
 - Gemini 3.8 Live Extended Thinking was dropped: it answered in speech and made no tool calls (all five `a` runs).
 - The very first run (filelock, Gemini 3.5 Flash) stopped on the 20 request daily quota after 22 calls, before any edit.
 
+### Protocol v2 (checkpoint guidance)
+
+Same agent, budget, prompt and evaluator. v2 only adds three messages to the tool result notice: a hypothesis checkpoint at
+call 15, a repair checkpoint at call 25, and a guard after three failing edit/test cycles (see `docs/budget-analysis.md`).
+Run folders end in `-v2a`. One attempt per cell, 2026-10-31.
+
+| Driver | filelock-346 | packaging-638 | attrs-1416 | click-3449 | flask-5160 | Solved |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gemini 3.1 Flash Live (preview) | **success**, root cause match, evidence 14/16 | **success**, root cause match, evidence 15/16 | **success**, root cause likely, evidence 50/52 | **success**, root cause partial, evidence 41/47 | **success**, root cause match, evidence 17/24 | 5/5 |
+| Gemini 3.5 Flash Lite | **success**, root cause likely, evidence 13/22 | **success**, root cause partial, evidence 9/12 | **success**, root cause likely, evidence 25/29 | no submit (40 calls used) | **success**, root cause likely, evidence 16/21 | 4/5 |
+| Gemini 3.1 Flash Lite | no submit (15 active minutes used) | stopped: HTTP 503 (busy) | no submit (15 active minutes used) | no submit (40 calls used) | **success**, root cause likely, evidence 7/8 | 1/5 |
+| Gemini 3.8 Live | no submit (40 calls used) | **success**, root cause partial, evidence 14/16 | no submit (40 calls used) | no submit (40 calls used) | **success**, root cause match, evidence 5/8 | 2/5 |
+
+Cases solved by at least one v2 driver: 5 of 5.
+
+Notes on v2:
+- Gemini 3.1 Flash Live went from 4 to 5 of 5; attrs was solved after the hypothesis checkpoint fired at call 15.
+- Gemini 3.5 Flash Lite went from 3 to 4 of 5; filelock was solved after the repair checkpoint fired at call 25.
+- Gemini 3.8 Live stayed at 2 of 5. On filelock it made 11 edits but checked them with `run_python`, not `run_tests`, so the
+  thrash guard (which counts failing `run_tests` only) never fired. A gap in v2.
+- Gemini 3.1 Flash Lite fell from 3 to 1 of 5, but three of its four failures were caused by the service: HTTP 503 on 17 to 18
+  requests, single replies taking up to 585 s. packaging stopped on 503; filelock and attrs ran out of active time because a
+  failed request's hanging time was counted as the agent's time. That harness bug is fixed (the time is now counted as
+  waiting); these three cells need a rerun before v2 can be judged on this driver.
+- Two v2 reports have a `contradicted` verification: Gemini 3.5 Flash Lite cited call numbers one off from the output it
+  quoted (for example it quoted the result of call 28 under call 31).
+
 Limits of these results:
 - Five public bugs, one counted attempt per cell. Indicative only; the models may have seen these fixes in training.
 - `likely` and `partial` root causes have not yet been reviewed by a person.

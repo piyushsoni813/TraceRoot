@@ -1,0 +1,179 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.5-flash-lite",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "41 passed in 0.37s"
+    ],
+    "applied_diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..120bdc1b 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,10 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except (ImportError, ValueError):\n+        spec = None\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..ab603a2e 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -832,7 +832,10 @@ def _find_package_path(import_name):\n     else:\n         # namespace package\n         if root_spec.origin in {\"namespace\", None}:\n-            package_spec = importlib.util.find_spec(import_name)\n+            try:\n+                package_spec = importlib.util.find_spec(import_name)\n+            except (ImportError, ValueError):\n+                package_spec = None\n             if package_spec is not None and package_spec.submodule_search_locations:\n                 # Pick the path in the namespace that contains the submodule.\n                 package_path = pathlib.Path(\n@@ -855,7 +858,11 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except (ImportError, ValueError):\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "root_cause": {
+    "status": "likely",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/flask/helpers.py",
+      "src/flask/scaffold.py"
+    ],
+    "claimed": {
+      "file": "src/flask/helpers.py and src/flask/scaffold.py",
+      "function": "get_root_path and _find_package_path",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 16,
+      "unverifiable": 5,
+      "contradicted": 0
+    },
+    "total": 21,
+    "verified_fraction": 0.762,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 3 is git_show with output",
+        "ref": "H1 -> call 3"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 4 is read_file with output",
+        "ref": "H1 -> call 4"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 8 is run_tests with output",
+        "ref": "H1 -> call 8"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 9 is run_python with output",
+        "ref": "H1 -> call 9"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 3 is git_show with output",
+        "ref": "H2 -> call 3"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 4 is read_file with output",
+        "ref": "H2 -> call 4"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 8 is run_tests with output",
+        "ref": "H2 -> call 8"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 9 is run_python with output",
+        "ref": "H2 -> call 9"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "cited call is not a test or script run",
+        "ref": "verification[0] -> call 9"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "command does not name the tests that were run",
+        "ref": "verification[1] -> call 31"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`import_name = \"__main__\"` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`ValueError: __main__.__spec__ is None` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`__main__.__spec__` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`get_root_path` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_find_package_path` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`try...except (ImportError, ValueError):` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "unverifiable",
+        "detail": "src/flask/helpers.py and src/flask/scaffold.py was never opened or found by a search",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 34,
+    "model_calls": 30,
+    "total_tokens": 253588,
+    "seconds": 143.6,
+    "active_seconds": 66.1,
+    "waited_seconds": 77.5,
+    "models_used": {
+      "gemini-3.5-flash-lite": 30
+    }
+  }
+}

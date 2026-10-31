@@ -1,0 +1,139 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 16,
+    "unverifiable": 5,
+    "contradicted": 0
+  },
+  "total": 21,
+  "verified_fraction": 0.762,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 3 is git_show with output",
+      "ref": "H1 -> call 3"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 4 is read_file with output",
+      "ref": "H1 -> call 4"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 8 is run_tests with output",
+      "ref": "H1 -> call 8"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 9 is run_python with output",
+      "ref": "H1 -> call 9"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 3 is git_show with output",
+      "ref": "H2 -> call 3"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 4 is read_file with output",
+      "ref": "H2 -> call 4"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 8 is run_tests with output",
+      "ref": "H2 -> call 8"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 9 is run_python with output",
+      "ref": "H2 -> call 9"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "cited call is not a test or script run",
+      "ref": "verification[0] -> call 9"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "command does not name the tests that were run",
+      "ref": "verification[1] -> call 31"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`import_name = \"__main__\"` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`ValueError: __main__.__spec__ is None` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`__main__.__spec__` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_root_path` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_find_package_path` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`try...except (ImportError, ValueError):` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "unverifiable",
+      "detail": "src/flask/helpers.py and src/flask/scaffold.py was never opened or found by a search",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

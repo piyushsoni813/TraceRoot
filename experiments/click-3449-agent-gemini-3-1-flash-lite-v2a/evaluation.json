@@ -1,0 +1,22 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "click-3449",
+  "model": "gemini-3.1-flash-lite",
+  "repair": {
+    "outcome": "no_submission",
+    "run_outcome": "budget_exhausted"
+  },
+  "root_cause": null,
+  "evidence": null,
+  "cost": {
+    "tool_calls": 40,
+    "model_calls": 40,
+    "total_tokens": 802504,
+    "seconds": 354.9,
+    "active_seconds": 213.0,
+    "waited_seconds": 141.9,
+    "models_used": {
+      "gemini-3.1-flash-lite": 40
+    }
+  }
+}

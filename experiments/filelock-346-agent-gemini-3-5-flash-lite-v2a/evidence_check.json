@@ -1,0 +1,145 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 13,
+    "unverifiable": 8,
+    "contradicted": 1
+  },
+  "total": 22,
+  "verified_fraction": 0.591,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 5 is git_log with output",
+      "ref": "H1 -> call 5"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 8 is record_hypothesis, which produces no evidence",
+      "ref": "H1 -> call 8"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 5 is git_log with output",
+      "ref": "H2 -> call 5"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 8 is record_hypothesis, which produces no evidence",
+      "ref": "H2 -> call 8"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "command does not name the tests that were run",
+      "ref": "verification[0] -> call 8"
+    },
+    {
+      "kind": "verification",
+      "status": "contradicted",
+      "detail": "claimed 86 passed, 20 skipped but the output shows no counts",
+      "ref": "verification[1] -> call 28"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`cls.__init__` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`init_params[\"lock_file\"] = lock_file` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`FilePathLock.__init__(self, file_path)` appears nowhere in the transcript",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`init_params[\"lock_file\"] = lock_file` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`inspect.signature(cls.__init__)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`present_params` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`init_params[\"lock_file\"] = lock_file` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`lock_file=...` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`file_path=...` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`**init_params` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`cls.__init__` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/filelock/_api.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

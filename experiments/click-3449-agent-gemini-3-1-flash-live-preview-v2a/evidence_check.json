@@ -1,0 +1,295 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 41,
+    "unverifiable": 6,
+    "contradicted": 0
+  },
+  "total": 47,
+  "verified_fraction": 0.872,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 25 is run_python with output",
+      "ref": "H1 -> call 25"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 25 is run_python with output",
+      "ref": "H2 -> call 25"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "call 3 ran before the last edit (call 28)",
+      "ref": "verification[0] -> call 25"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 29 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 3"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 30 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[2] -> call 29"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 31 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[3] -> call 30"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_pager_file` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`MaybeStripAnsi` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`TextIOWrapper` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_NamedTextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_NamedTextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_NamedTextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`io.TextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_pager_file` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`pager.close()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_pager_file` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`pager.close()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`sys.stdout.close()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`src/click/testing.py` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`sys.stdout.close()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_pager_file` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`sys.stdout.flush()` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`CliRunner.invoke` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`sys.stdout.flush()` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`io.TextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_NamedTextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`io.TextIOWrapper.close()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`sys.stdout.closed` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`io.TextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`io.TextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_NamedTextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`io.TextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`sys.stdout.closed` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`sys.stdout.closed` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_pager_file` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`get_pager_file` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/click/_termui_impl.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

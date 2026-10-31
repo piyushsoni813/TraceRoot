@@ -143,6 +143,13 @@ results, limitations) for human review. No automatic merge or deploy.
   Implemented as `PROTOCOL = "v2"` (default; `--protocol=v1` restores round 1 behaviour). The system prompt is unchanged;
   guidance is appended to the tool result notice and logged as `guidance` events. run.json records `protocol`.
   v2 runs use the variant suffix `v2a` so they never mix with v1 folders.
+- Protocol v2 round (2026-10-31, folders `-v2a`): 3.1 Flash Live 5/5 (v1 4/5), 3.5 Flash Lite 4/5 (v1 3/5), 3.8 Live 2/5 (same),
+  3.1 Flash Lite 1/5 (v1 3/5, but 3 failures were HTTP 503 storms plus a harness timing bug). Table in README.
+  Harness fix after v2: a failed request's hanging time now counts as waiting, not active time. Rerun 3.1 Flash Lite filelock,
+  packaging, attrs under v2 before judging that driver.
+- v2 gaps found: the thrash guard ignores failing `run_python` checks after edits (3.8 Live filelock made 11 edits unguarded);
+  models sometimes cite call numbers one off, likely because the call number appears only at the end of each result.
+  Candidate v3: count run_python failures in the thrash guard; put "[call N]" at the start of every tool result.
 - Parked for later: discussion of a multi-agent design (planner, reviewer) on top of the single investigator agent.
 - Next, in order: (2) root cause review sheet for a person to confirm likely/partial, (3) analyse where the 40 calls go in
   budget_exhausted runs, (4) test improvements as protocol v2 against frozen v1, (5) new cases fixed after model training cutoffs. (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
