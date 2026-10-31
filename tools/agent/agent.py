@@ -2,6 +2,8 @@
 
 usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N]
 
+model may be a comma separated chain (m1,m2,m3): when one model's daily quota ends the run continues on the next.
+
 A model name starting with 'local' uses llama-server on 127.0.0.1:8091 (free, for harness dry runs).
 
 Writes to <run_dir>: transcript.jsonl (every model response and tool result, unedited),
@@ -49,14 +51,70 @@ class ApiError(Exception):
     pass
 
 
+class DailyQuotaError(ApiError):
+    pass
+
+
+# free-tier requests per minute (from https://ai.dev/rate-limit on 2026-10-31)
+RPM = {"gemini-3.5-flash": 5, "gemini-3.6-flash": 5, "gemini-3.8-flash": 5, "gemini-3-flash-preview": 5,
+       "gemini-2.5-flash": 5, "gemini-2.5-flash-lite": 10, "gemini-3.5-flash-lite": 15, "gemini-3.1-flash-lite": 15}
+DEFAULT_RPM = 5
+MAX_WALL_SECONDS = 60 * 60
+
+
+def strip_signatures(contents):
+    """Thought signatures belong to the model that wrote them; drop them when another model takes over."""
+    out = json.loads(json.dumps(contents))
+    for c in out:
+        for p in c.get("parts", []):
+            p.pop("thoughtSignature", None)
+    return out
+
+
 class GeminiClient:
+    """Gemini over REST.
+
+    `model` may be a comma separated chain. When a model's daily quota is used up the same
+    conversation continues on the next one. Requests are paced to each model's per-minute limit.
+    Time spent waiting (pacing and retry back-off) is added to `waited`, so the loop can keep
+    it out of the agent's time budget.
+    """
     def __init__(self, model, log):
-        self.model, self.log = model, log
+        self.models = [m.strip() for m in model.split(",") if m.strip()]
+        self.log = log
+        self.idx, self.waited, self.strip = 0, 0.0, False
+        self.last_model = self.models[0]
+        self._last_request = {}
         self.key = os.environ.get("GEMINI_API_KEY")
         if not self.key:
             raise SystemExit("GEMINI_API_KEY is not set")
 
+    def _sleep(self, seconds):
+        if seconds > 0:
+            time.sleep(seconds)
+            self.waited += seconds
+
+    def _pace(self, model):
+        last = self._last_request.get(model)
+        if last is not None:
+            self._sleep(last + 60.0 / RPM.get(model, DEFAULT_RPM) + 0.5 - time.time())
+        self._last_request[model] = time.time()
+
     def generate(self, system, contents):
+        while True:
+            model = self.models[self.idx]
+            try:
+                resp, attempt = self._request(model, system, strip_signatures(contents) if self.strip else contents)
+                self.last_model = model
+                return resp, attempt
+            except DailyQuotaError:
+                if self.idx + 1 >= len(self.models):
+                    raise
+                self.log("model_switch", from_model=model, to_model=self.models[self.idx + 1], reason="daily quota")
+                self.idx += 1
+                self.strip = True
+
+    def _request(self, model, system, contents):
         body = json.dumps({
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": contents,
@@ -64,8 +122,9 @@ class GeminiClient:
             "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
             "generationConfig": GEN_CONFIG,
         }).encode()
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         for attempt in range(1, MAX_API_ATTEMPTS + 1):
+            self._pace(model)
             req = urllib.request.Request(url, body, {"Content-Type": "application/json", "x-goog-api-key": self.key})
             try:
                 raw = urllib.request.urlopen(req, timeout=300).read()
@@ -73,16 +132,16 @@ class GeminiClient:
             except urllib.error.HTTPError as e:
                 detail = e.read().decode("utf-8", "replace")[:500]
                 if e.code == 429 and "per day" in detail:  # a daily quota will not clear by waiting
-                    raise ApiError(f"HTTP 429 (daily quota): {detail}")
+                    raise DailyQuotaError(f"HTTP 429 (daily quota, {model}): {detail}")
                 if e.code in RETRY_CODES and attempt < MAX_API_ATTEMPTS:
-                    self.log("api_retry", attempt=attempt, status=e.code, detail=detail)
-                    time.sleep(min(60, 2 ** attempt))
+                    self.log("api_retry", attempt=attempt, status=e.code, model=model, detail=detail)
+                    self._sleep(min(60, 2 ** attempt))
                     continue
-                raise ApiError(f"HTTP {e.code}: {detail}")
+                raise ApiError(f"HTTP {e.code} ({model}): {detail}")
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
                 if attempt < MAX_API_ATTEMPTS:
-                    self.log("api_retry", attempt=attempt, status="network", detail=str(e)[:300])
-                    time.sleep(min(60, 2 ** attempt))
+                    self.log("api_retry", attempt=attempt, status="network", model=model, detail=str(e)[:300])
+                    self._sleep(min(60, 2 ** attempt))
                     continue
                 raise ApiError(f"network: {e}")
 
@@ -181,12 +240,15 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
 
     cfg = {"case_id": case, "model": model, "tools_hash": TOOLS_HASH, "system_prompt_sha256": sha(SYSTEM_PROMPT),
            "user_prompt_sha256": sha(user_text), "gen_config": GEN_CONFIG,
-           "limits": {"tool_calls": max_calls, "seconds": max_seconds, "context_tokens": MAX_CONTEXT_TOKENS},
+           "limits": {"tool_calls": max_calls, "active_seconds": max_seconds, "wall_seconds": MAX_WALL_SECONDS,
+                      "context_tokens": MAX_CONTEXT_TOKENS, "note": "time spent waiting on rate limits is excluded from active_seconds"},
            "sandbox_image": "traceroot-sandbox:1"}
     json.dump(cfg, open(f"{run_dir}/run.json", "w"), indent=2)
     log("run_start", config=cfg, system_prompt=SYSTEM_PROMPT, user_prompt=user_text)
 
     client = client_factory(model, log)
+    active = lambda: time.time() - t0 - getattr(client, "waited", 0.0)  # rate-limit waits are not the agent's time
+    models_used = {}
     contents = [{"role": "user", "parts": [{"text": user_text}]}]
     outcome, nudges, total_tokens, last_ctx, model_calls = None, 0, 0, 0, 0
     workdir = f"{ROOT}/.tmp/agent-{os.path.basename(os.path.normpath(run_dir))}"
@@ -194,7 +256,7 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
         ts = Toolset(sb)
         try:
             while outcome is None:
-                if time.time() - t0 > max_seconds:
+                if active() > max_seconds or time.time() - t0 > MAX_WALL_SECONDS:
                     outcome = "time_exhausted"
                     break
                 resp, attempt = client.generate(SYSTEM_PROMPT, contents)
@@ -202,7 +264,9 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
                 usage = resp.get("usageMetadata", {})
                 last_ctx = usage.get("promptTokenCount", 0)
                 total_tokens += usage.get("totalTokenCount", 0)
-                log("model_response", attempt=attempt, response=resp)
+                answered_by = getattr(client, "last_model", model)
+                models_used[answered_by] = models_used.get(answered_by, 0) + 1
+                log("model_response", attempt=attempt, model=answered_by, response=resp)
                 cands = resp.get("candidates") or []
                 if not cands or "content" not in cands[0]:
                     outcome = "model_returned_nothing"
@@ -227,7 +291,7 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
                     t_call = time.time()
                     result = ts.call(fc["name"], fc.get("args"))
                     left = max_calls - ts.n_calls
-                    mins = max(0, (max_seconds - (time.time() - t0)) / 60)
+                    mins = max(0, (max_seconds - active()) / 60)
                     notice = f"[tool call {ts.n_calls} of {max_calls} used, {left} left, {mins:.0f} min left]"
                     log("tool_call", n=ts.n_calls, name=fc["name"], args=fc.get("args"), result=result, notice=notice,
                         seconds=round(time.time() - t_call, 2))
@@ -255,7 +319,9 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
         open(f"{run_dir}/workspace.patch", "w", encoding="utf-8", newline="\n").write(diff)
         n_calls = ts.n_calls
     result = {"outcome": outcome, "tool_calls": n_calls, "model_calls": model_calls,
-              "seconds": round(time.time() - t0, 1), "total_tokens": total_tokens, "last_context_tokens": last_ctx}
+              "seconds": round(time.time() - t0, 1), "active_seconds": round(active(), 1),
+              "waited_seconds": round(getattr(client, "waited", 0.0), 1), "models_used": models_used,
+              "total_tokens": total_tokens, "last_context_tokens": last_ctx}
     json.dump(result, open(f"{run_dir}/result.json", "w"), indent=2)  # report.py reads this
     if outcome == "submitted":
         errors = report_mod.write(run_dir)

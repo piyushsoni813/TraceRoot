@@ -104,6 +104,13 @@ results, limitations) for human review. No automatic merge or deploy.
   quota (20 requests) after 16 successful requests and 22 tool calls (batching worked: 1.4 calls per request), no edit made, `no_submission`.
   Conclusion: one run needs more than 20 requests (the agent was still investigating at request 16), so the free tier cannot finish a run in one day.
   Failed 503 attempts may also count against the quota. The run is kept and not repeated.
+- Free-tier quotas seen on https://ai.dev/rate-limit (2026-10-31): Flash models (3.5/3.6, 3, 3.8, 2.5) 5 RPM and 20 RPD each;
+  Flash Lite models (gemini-3.5-flash-lite, gemini-3.1-flash-lite) 15 RPM and 500 RPD; Pro models 0 on free tier.
+- Agent client now supports a comma separated model chain (switches model on a daily quota, strips thought signatures on switch,
+  logs `model_switch`), paces requests to each model's RPM, and keeps rate-limit waits out of the 15 minute budget
+  (`active_seconds`; `seconds` is wall time; hard wall cap 60 min). `result.json` records `models_used`.
+- Decision: real runs use ONE model for the whole run, `gemini-3.5-flash-lite` (500 RPD makes complete runs possible).
+  The chain is available but mixes models inside a run, so it is not used for the main results.
 - Next: step 10, real runs on the free tier (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
   tweak to batch independent calls (not done; it changes behaviour, so decide before the first real run).
 

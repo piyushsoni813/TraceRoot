@@ -123,7 +123,7 @@ def score(run_dir):
           "repair": {"outcome": outcome, **detail},
           "root_cause": root,
           "evidence": json.load(open(ev_path)) if os.path.exists(ev_path) else None,
-          "cost": {k: result.get(k) for k in ("tool_calls", "model_calls", "total_tokens", "seconds")}}
+          "cost": {k: result.get(k) for k in ("tool_calls", "model_calls", "total_tokens", "seconds", "active_seconds", "waited_seconds", "models_used")}}
     json.dump(ev, open(f"{run_dir}/evaluation.json", "w", encoding="utf-8"), indent=2)
     return ev
 

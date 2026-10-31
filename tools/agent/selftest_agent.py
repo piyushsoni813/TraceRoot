@@ -220,6 +220,63 @@ check("local usage is mapped", r["usageMetadata"] == {"promptTokenCount": 321, "
 check("local request forces a tool call and sends every tool", sent["body"]["tool_choice"] == "required" and len(sent["body"]["tools"]) == len(agent.SPECS))
 check("gemini model names pick GeminiClient", isinstance(agent.make_client("gemini-3.5-flash", lambda e, **kw: None), agent.GeminiClient))
 
+# 8d. model chain: a daily quota on one model moves the same conversation to the next
+class Clock:
+    def __init__(self): self.now = 1000.0; self.slept = []
+    def time(self): return self.now
+    def sleep(self, s): self.slept.append(s); self.now += s
+
+clock = Clock()
+real_time, real_sleep = agent.time.time, agent.time.sleep
+agent.time.time, agent.time.sleep = clock.time, clock.sleep
+seen_urls, seen_bodies = [], []
+def chain_open(req, timeout=0):
+    seen_urls.append(req.full_url.split("/models/")[1].split(":")[0])
+    seen_bodies.append(req.data.decode())
+    if seen_urls[-1] == "model-a":
+        raise urllib.error.HTTPError(req.full_url, 429, "quota", {}, io.BytesIO(b'{"error":{"message":"requests per day limit exceeded"}}'))
+    return Resp(json.dumps(response([fc("list_dir")])).encode())
+agent.urllib.request.urlopen = chain_open
+chain_log = []
+chain = agent.GeminiClient("model-a, model-b", lambda e, **kw: chain_log.append((e, kw)))
+signed = [{"role": "user", "parts": [{"text": "hi"}]}, {"role": "model", "parts": [{"functionCall": {"name": "list_dir", "args": {}}, "thoughtSignature": "SIG-A"}]}]
+r, _ = chain.generate("sys", signed)
+check("daily quota on the first model moves on to the second", seen_urls == ["model-a", "model-b"] and chain.last_model == "model-b", seen_urls)
+check("the switch is logged with both model names", [(k["from_model"], k["to_model"]) for e, k in chain_log if e == "model_switch"] == [("model-a", "model-b")])
+check("thought signatures are not sent to the next model", "SIG-A" in seen_bodies[0] and "SIG-A" not in seen_bodies[1])
+check("the caller's history keeps its signatures", signed[1]["parts"][0]["thoughtSignature"] == "SIG-A")
+chain.generate("sys", signed)
+check("later requests stay on the new model", seen_urls[-1] == "model-b" and "model-a" not in seen_urls[2:])
+# pacing: five requests per minute means at least 12 s between two requests to the same model
+clock.slept.clear(); before = chain.waited
+chain.generate("sys", signed)
+check("requests to one model are paced to its per-minute limit", clock.slept and 12.0 <= sum(clock.slept) <= 13.5, clock.slept)
+check("pacing time is counted as waiting", abs(chain.waited - before - sum(clock.slept)) < 1e-6)
+fast = agent.GeminiClient("gemini-3.5-flash-lite", lambda e, **kw: None)
+fast.generate("sys", signed); clock.slept.clear(); fast.generate("sys", signed)
+check("a model with a higher limit waits less", clock.slept and 4.0 <= sum(clock.slept) <= 5.0, clock.slept)
+# every model out of quota raises
+agent.urllib.request.urlopen = lambda req, timeout=0: (_ for _ in ()).throw(urllib.error.HTTPError(req.full_url, 429, "q", {}, io.BytesIO(b'{"error":{"message":"requests per day limit exceeded"}}')))
+allout = agent.GeminiClient("m1,m2", lambda e, **kw: None)
+try:
+    allout.generate("sys", signed)
+    check("all models out of quota raises", False)
+except agent.DailyQuotaError:
+    check("all models out of quota raises", True)
+agent.time.time, agent.time.sleep = real_time, real_sleep
+
+# 8e. waiting on rate limits is not the agent's time, and the answering model is recorded
+class Slow(Scripted):
+    waited = 0.0
+    last_model = "m-x"
+    def generate(self, system, contents):
+        self.waited += 1000.0       # pretend a long rate-limit wait happened before this answer
+        return super().generate(system, contents)
+d, res, ev = go("waited", Slow([response([fc("list_dir", path=".")])] * 2), max_calls=2, max_seconds=900)
+check("a long rate-limit wait does not use up the time budget", res["outcome"] == "budget_exhausted", res)
+check("result separates active and waited time", res["waited_seconds"] == 2000.0 and res["active_seconds"] < res["seconds"], res)
+check("model_response records the answering model and result counts them", all(e["model"] == "m-x" for e in ev if e["event"] == "model_response") and res["models_used"] == {"m-x": 2}, res)
+
 # 9. the key never reaches the saved files
 key = os.environ["GEMINI_API_KEY"]
 leak = [os.path.join(dp, f) for dp, _, fs in os.walk(RUNS) for f in fs if key.encode() in open(os.path.join(dp, f), "rb").read()]
