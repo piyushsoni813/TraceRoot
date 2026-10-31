@@ -74,7 +74,15 @@ results, limitations) for human review. No automatic merge or deploy.
   cited calls), evidence (cited calls resolved to tool, args and a 400 char excerpt from the transcript), patch (edits and diff),
   verification, limitations, decision (always "ready for human review"). Structure only: it checks every cited call exists.
   Whether the output supports the claim is step 8.
-- Next: step 8 evidence checker, step 9 scoring, step 10 runs (needs a paid Gemini key first).
+- Step 9 done: `tools/agent/score.py <run_dir>` writes `evaluation.json`. Repair uses the same evaluator and outcome names as the
+  baseline (replays the submitted edits on a fresh checkout, reproducer must exit 0, held-out upstream tests at the fixed revision).
+  Root cause is compared with the real fix by script: `match` (breaking commit), `likely` (file and function, needs a person),
+  `partial`, `miss`. Evidence slot stays null until step 8. Cost is copied from result.json. `selftest_score.py` (76 checks, no API):
+  the real fix scores success on all five cases, no-op, wrong scope, traversal, bad search and a fix that breaks other behaviour fail correctly.
+  Git clones now pin `core.autocrlf=false` so multi-line search text matches on Windows.
+- Step 8 (evidence checker) is still open.
+- Decision (2026-10-31): stay on the Gemini FREE tier, no billing. Limit is 20 requests per day per model, so real runs
+  must be planned around that (see the run plan in the next session note).
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.

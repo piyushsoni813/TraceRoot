@@ -32,7 +32,7 @@ def rm_readonly(fn, path, _):
 
 if os.path.exists(dest):
     shutil.rmtree(dest, onerror=rm_readonly)
-subprocess.run(["git", "clone", "-q", "--no-local", upstream, dest], check=True, capture_output=True)
+subprocess.run(["git", "-c", "core.autocrlf=false", "clone", "-q", "--no-local", upstream, dest], check=True, capture_output=True)
 git("checkout", "-q", "--detach", faulty)
 git("checkout", "-q", "-B", "main")
 git("remote", "remove", "origin")
