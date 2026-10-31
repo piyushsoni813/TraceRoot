@@ -90,6 +90,8 @@ results, limitations) for human review. No automatic merge or deploy.
 - Decision (2026-10-31): stay on the Gemini FREE tier, no billing. Limit is 20 requests per day per model, so real runs
   must be planned around that (see the run plan in the next session note).
 
+- Next: step 10, real runs on the free tier (20 requests/day per model; plan runs around it). Prompt tweak to batch independent calls is proposed, not done.
+
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.
 - The investigator agent, sandbox, hypothesis tracking and the auditable report are not built.
