@@ -48,7 +48,10 @@ results, limitations) for human review. No automatic merge or deploy.
 - Step 1 done: Docker image `traceroot-sandbox:1` (`tools/sandbox/`). Python 3.13.7, pinned deps, git, non-root user.
   Run with `--network none`, workspace mounted at `/work`, `PYTHONPATH=/work/src:/work`, pytest `-W ignore::DeprecationWarning`.
   On Windows Git Bash set `MSYS_NO_PATHCONV=1`. Checked on flask-5160: git works, no network, reproducer exits 1 at the faulty revision.
-- Next: step 2, sandbox repo builder (fresh clone, remove fix commit/tags/branches/reflogs).
+- Step 2 done: `tools/scripts/build_sandbox_repo.py <case_id> <dest>` builds the workspace at the faulty revision.
+  Leaves only branch `main`, no remote, tags, reflogs or unreachable objects. Self-checks that the fix is absent from
+  `git log --all` and the object store, and that the breaking commit stays visible. Passes on all five cases.
+- Next: step 3, tools (list_dir, read_file, search, git_*, run_python, run_tests, submit).
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.
