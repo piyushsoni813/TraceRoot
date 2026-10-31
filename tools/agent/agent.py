@@ -72,6 +72,20 @@ Efficiency: each reply you send uses one request from a small daily allowance, s
 Always answer with a tool call."""
 
 NUDGE = "Continue by calling a tool. When you are done, call submit."
+MALFORMED_NUDGE = ("Your last function call could not be parsed ({reason}: {detail}). "
+                   "Call the tool again with valid JSON arguments that match its declaration.")
+RECOVERABLE_FINISH = {"MALFORMED_FUNCTION_CALL", "UNEXPECTED_TOOL_CALL"}
+
+
+def merge_roles(contents):
+    """Join neighbouring turns of the same role; the REST API expects user and model turns to alternate."""
+    out = []
+    for c in contents:
+        if out and out[-1].get("role") == c.get("role"):
+            out[-1] = {"role": c.get("role"), "parts": out[-1].get("parts", []) + c.get("parts", [])}
+        else:
+            out.append(c)
+    return out
 
 
 class ApiError(Exception):
@@ -159,7 +173,7 @@ class GeminiClient:
     def _request(self, model, system, contents):
         body = json.dumps({
             "systemInstruction": {"parts": [{"text": system}]},
-            "contents": contents,
+            "contents": merge_roles(contents),
             "tools": [{"functionDeclarations": SPECS}],
             "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
             "generationConfig": GEN_CONFIG,
@@ -483,6 +497,14 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
                 log("model_response", attempt=attempt, model=answered_by, response=resp)
                 cands = resp.get("candidates") or []
                 if not cands or "content" not in cands[0]:
+                    reason = cands[0].get("finishReason") if cands else None
+                    if reason in RECOVERABLE_FINISH and nudges < MAX_NUDGES:
+                        # a broken call is the model's slip, not the end of the run: say so and ask again
+                        nudges += 1
+                        detail = (cands[0].get("finishMessage") or "")[:300]
+                        log("nudge", n=nudges, finish_reason=reason, detail=detail)
+                        contents.append({"role": "user", "parts": [{"text": MALFORMED_NUDGE.format(reason=reason, detail=detail or "no detail")}]})
+                        continue
                     outcome = "model_returned_nothing"
                     break
                 content = cands[0]["content"]

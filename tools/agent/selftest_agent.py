@@ -128,6 +128,20 @@ check("nudged then no_submission", res["outcome"] == "no_submission" and sum(e["
 d, res, ev = go("empty", Scripted([{"candidates": [], "usageMetadata": {}}]))
 check("empty candidate outcome", res["outcome"] == "model_returned_nothing", res)
 
+# 5b. a malformed function call is nudged, not the end of the run
+bad_call = {"candidates": [{"finishReason": "MALFORMED_FUNCTION_CALL", "finishMessage": "Malformed function call: read_file(path=)"}], "usageMetadata": {}}
+mal = Scripted([bad_call, response([fc("list_dir", path=".")]), response([fc("list_dir", path="src")])])
+d, res, ev = go("malformed", mal, max_calls=2)
+check("a malformed call is nudged and the run goes on", res["outcome"] == "budget_exhausted" and res["tool_calls"] == 2, res)
+check("the nudge names the reason", any(e["event"] == "nudge" and e.get("finish_reason") == "MALFORMED_FUNCTION_CALL" for e in ev))
+check("the model is told what went wrong", "could not be parsed" in json.dumps(mal.sent[1][-1]))
+d, res, ev = go("malformed-loop", Scripted([bad_call] * 6))
+check("endless malformed calls still stop after the nudge limit", res["outcome"] == "model_returned_nothing" and sum(e["event"] == "nudge" for e in ev) == agent.MAX_NUDGES, res)
+check("neighbouring user turns are merged for the REST API",
+      agent.merge_roles([{"role": "user", "parts": [{"functionResponse": {"name": "a"}}]}, {"role": "user", "parts": [{"text": "n"}]},
+                         {"role": "model", "parts": [{"text": "m"}]}]) ==
+      [{"role": "user", "parts": [{"functionResponse": {"name": "a"}}, {"text": "n"}]}, {"role": "model", "parts": [{"text": "m"}]}])
+
 # 6. context budget
 d, res, ev = go("context", Scripted([response([fc("list_dir", path=".")], ctx=250_000)] * 3))
 check("context outcome", res["outcome"] == "context_exhausted", res)
