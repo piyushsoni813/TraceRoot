@@ -56,6 +56,13 @@ SPECS = [
      "parameters": _obj({"code": {"type": "string"}}, ["code"])},
     {"name": "run_tests", "description": "Run pytest on the given paths or node ids (120 s).",
      "parameters": _obj({"selection": {"type": "array", "items": {"type": "string"}}}, ["selection"])},
+    {"name": "record_hypothesis",
+     "description": "Record one candidate explanation of the bug and what you would observe if it were true. Record at least two competing ones before submitting.",
+     "parameters": _obj({"text": {"type": "string"}, "predicts": {"type": "string", "description": "An observation that would confirm or rule it out"}}, ["text", "predicts"])},
+    {"name": "update_hypothesis",
+     "description": "Resolve a hypothesis after a check. status: supported, rejected or open. calls: numbers of the earlier tool calls that gave the evidence.",
+     "parameters": _obj({"id": {"type": "string", "description": "e.g. H1"}, "status": {"type": "string", "enum": ["supported", "rejected", "open"]},
+                         "evidence": {"type": "string"}, "calls": {"type": "array", "items": {"type": "integer"}}}, ["id", "status", "evidence", "calls"])},
     {"name": "submit",
      "description": "End the run. edits: list of {path, search, replace}; each search must match exactly once in the original file and path must be under src/. report: your findings.",
      "parameters": _obj({
@@ -71,8 +78,11 @@ class Toolset:
     def __init__(self, sandbox):
         self.sb = sandbox
         self.submission = None
+        self.n_calls = 0          # 1-based number of the tool call being served; evidence cites these
+        self.hypotheses = {}
 
     def call(self, name, args):
+        self.n_calls += 1
         fn = getattr(self, "t_" + name, None) if name in _NAMES else None
         if fn is None:
             return f"error: unknown tool {name!r}"
@@ -149,10 +159,40 @@ class Toolset:
                                "--timeout", "60", *selection], timeout=120)
         return f"[exit {c}]\n{out}"
 
+    def t_record_hypothesis(self, text, predicts):
+        if not (isinstance(text, str) and text.strip() and isinstance(predicts, str) and predicts.strip()):
+            return "error: text and predicts must be non-empty strings"
+        hid = f"H{len(self.hypotheses) + 1}"
+        self.hypotheses[hid] = {"id": hid, "text": text, "predicts": predicts, "status": "open",
+                                "evidence": "", "calls": [], "recorded_at_call": self.n_calls}
+        return f"recorded {hid}"
+
+    def t_update_hypothesis(self, id, status, evidence, calls):
+        h = self.hypotheses.get(id)
+        if h is None:
+            return f"error: unknown hypothesis {id!r}; known: {', '.join(self.hypotheses) or 'none'}"
+        if status not in ("supported", "rejected", "open"):
+            return "error: status must be supported, rejected or open"
+        if not isinstance(evidence, str) or not evidence.strip():
+            return "error: evidence must be a non-empty string"
+        # a cited call must be an earlier call, not this one and not one in the future
+        if (not isinstance(calls, list) or not all(isinstance(c, int) and not isinstance(c, bool) and 1 <= c < self.n_calls for c in calls)
+                or (status != "open" and not calls)):
+            return f"error: calls must be earlier tool call numbers (1 to {self.n_calls - 1}), and are required unless status is open"
+        h.update(status=status, evidence=evidence, calls=calls, updated_at_call=self.n_calls)
+        return f"{id} is now {status}"
+
     def t_submit(self, edits, report):
         if not isinstance(edits, list) or not isinstance(report, dict):
             return "error: edits must be a list and report an object"
         problems = []
+        if len(self.hypotheses) < 2:
+            problems.append("record at least two competing hypotheses first")
+        unresolved = [h for h, v in self.hypotheses.items() if v["status"] == "open"]
+        if unresolved:
+            problems.append(f"resolve every hypothesis (supported or rejected) first; still open: {', '.join(unresolved)}")
+        if self.hypotheses and not any(v["status"] == "supported" for v in self.hypotheses.values()):
+            problems.append("no hypothesis is supported; the root cause must be one of them")
         for i, ed in enumerate(edits):
             if not isinstance(ed, dict) or not all(isinstance(ed.get(k), str) for k in ("path", "search", "replace")):
                 problems.append(f"edit {i}: needs string fields path, search, replace")
@@ -168,5 +208,5 @@ class Toolset:
                 problems.append(f"edit {i}: search text matches {orig.count(ed['search'])} times in {p} (needs exactly 1)")
         if problems:
             return "rejected, fix and resubmit:\n" + "\n".join(problems)
-        self.submission = {"edits": edits, "report": report}
+        self.submission = {"edits": edits, "report": report, "hypotheses": list(self.hypotheses.values())}
         return "submitted"

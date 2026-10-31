@@ -56,7 +56,10 @@ results, limitations) for human review. No automatic merge or deploy.
   submit only under `src/`, each search must match once). `tools/agent/selftest_tools.py <case>` passes on all five cases.
   The builder now also writes `shim_files` from `env.json` (filelock needs a generated version.py).
   Image has a `less` stub (cat): a missing pager killed pytest silently on click's pager tests.
-- Next: step 4, hypothesis tools (record_hypothesis, update_hypothesis), then step 5 agent loop with budgets.
+- Step 4 done: `record_hypothesis` and `update_hypothesis` in `tools/agent/tools.py`. Tool calls are numbered from 1;
+  evidence must cite earlier call numbers (not the current or a future one). `submit` is refused until there are at least
+  two hypotheses, none left open, and at least one supported. The submission carries the hypotheses. Tools hash is now `ffeb20f0...`.
+- Next: step 5, agent loop (Gemini function calling, budgets of 40 calls / 15 min / 200k tokens, 503 retry with log), plus step 6 transcript logger.
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.
