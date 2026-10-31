@@ -21,3 +21,8 @@ cases/*/upstream/
 
 # Local Claude Code config
 .claude/
+
+# Secrets
+.env
+.env.*
+*.key

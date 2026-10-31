@@ -1,5 +1,5 @@
 """Agent tools. Each returns a string and never raises; errors come back as text."""
-import hashlib, json, re
+import hashlib, json, os, re
 
 MAX_OUT = 20 * 1024
 SCOPE = "src/"
@@ -63,12 +63,21 @@ SPECS = [
      "description": "Resolve a hypothesis after a check. status: supported, rejected or open. calls: numbers of the earlier tool calls that gave the evidence.",
      "parameters": _obj({"id": {"type": "string", "description": "e.g. H1"}, "status": {"type": "string", "enum": ["supported", "rejected", "open"]},
                          "evidence": {"type": "string"}, "calls": {"type": "array", "items": {"type": "integer"}}}, ["id", "status", "evidence", "calls"])},
+    {"name": "apply_edit",
+     "description": "Edit a file in the working copy so you can test your fix. path must be under src/. search must match exactly once in the file's current text. Edits are recorded and become your patch. Tests are not editable.",
+     "parameters": _obj({"path": {"type": "string"}, "search": {"type": "string"}, "replace": {"type": "string"}}, ["path", "search", "replace"])},
     {"name": "submit",
-     "description": "End the run. edits: list of {path, search, replace}; each search must match exactly once in the original file and path must be under src/. report: your findings.",
-     "parameters": _obj({
-         "edits": {"type": "array", "items": _obj({"path": {"type": "string"}, "search": {"type": "string"},
-                                                    "replace": {"type": "string"}}, ["path", "search", "replace"])},
-         "report": {"type": "object"}}, ["edits", "report"])},
+     "description": "End the run and hand the recorded edits plus your report to a human reviewer. Needs: at least two hypotheses all resolved with one supported, at least one apply_edit, and a run_tests call after the last edit. Report your findings in the fields below.",
+     "parameters": _obj({"report": _obj({
+         "root_cause": _obj({"file": {"type": "string"}, "function": {"type": "string"},
+                             "mechanism": {"type": "string", "description": "Why the code fails, in a few sentences"},
+                             "breaking_commit": {"type": "string", "description": "Commit hash if you identified it, else empty"}},
+                            ["file", "function", "mechanism"]),
+         "verification": {"type": "array", "items": _obj({"command": {"type": "string"}, "result": {"type": "string"},
+                                                           "call": {"type": "integer", "description": "tool call number of the run"}},
+                                                          ["command", "result", "call"])},
+         "limitations": {"type": "array", "items": {"type": "string"}}},
+         ["root_cause", "verification", "limitations"])}, ["report"])},
 ]
 TOOLS_HASH = hashlib.sha256(json.dumps(SPECS, sort_keys=True).encode()).hexdigest()
 _NAMES = {s["name"] for s in SPECS}
@@ -80,6 +89,9 @@ class Toolset:
         self.submission = None
         self.n_calls = 0          # 1-based number of the tool call being served; evidence cites these
         self.hypotheses = {}
+        self.edits = []           # applied edits in order: {path, search, replace}
+        self.last_edit_call = 0
+        self.last_tests_call = 0
 
     def call(self, name, args):
         self.n_calls += 1
@@ -87,7 +99,10 @@ class Toolset:
         if fn is None:
             return f"error: unknown tool {name!r}"
         try:
-            return _clip(fn(**(args or {})))
+            out = _clip(fn(**(args or {})))
+            if name == "run_tests" and out.startswith("[exit"):
+                self.last_tests_call = self.n_calls
+            return out
         except TypeError as e:
             return f"error: bad arguments: {e}"
 
@@ -182,9 +197,51 @@ class Toolset:
         h.update(status=status, evidence=evidence, calls=calls, updated_at_call=self.n_calls)
         return f"{id} is now {status}"
 
-    def t_submit(self, edits, report):
-        if not isinstance(edits, list) or not isinstance(report, dict):
-            return "error: edits must be a list and report an object"
+    def _host_path(self, rel):
+        full = os.path.realpath(os.path.join(self.sb.workdir, rel))
+        root = os.path.realpath(self.sb.workdir)
+        return full if full.startswith(root + os.sep) else None
+
+    def t_apply_edit(self, path, search, replace):
+        if _bad_path(path) or not path.startswith(SCOPE):
+            return f"error: path must be a relative path under {SCOPE}"
+        if not isinstance(search, str) or not search or not isinstance(replace, str):
+            return "error: search must be a non-empty string and replace a string"
+        full = self._host_path(path)
+        if full is None or not os.path.isfile(full):
+            return f"error: file not found: {path}"
+        text = open(full, encoding="utf-8", newline="").read()
+        n = text.count(search)
+        if n != 1:
+            return f"error: search text matches {n} times in {path} (needs exactly 1)"
+        open(full, "w", encoding="utf-8", newline="").write(text.replace(search, replace))
+        self.edits.append({"path": path, "search": search, "replace": replace})
+        self.last_edit_call = self.n_calls
+        return f"applied edit {len(self.edits)} to {path}. Run tests to check it."
+
+    def _workspace_matches_edits(self):
+        """True if the files under src/ equal HEAD plus the recorded edits and nothing else."""
+        code, out = self.sb.exec(["git", "status", "--porcelain", "--", SCOPE])
+        changed = {l[3:].strip() for l in out.splitlines()}
+        expected = {}
+        for ed in self.edits:
+            if ed["path"] not in expected:
+                c, orig = self.sb.exec(["git", "show", f"HEAD:{ed['path']}"])
+                if c != 0:
+                    return False, f"{ed['path']} not found at HEAD"
+                expected[ed["path"]] = orig
+            expected[ed["path"]] = expected[ed["path"]].replace(ed["search"], ed["replace"], 1)
+        stray = changed - set(expected)
+        if stray:
+            return False, "files changed without apply_edit: " + ", ".join(sorted(stray))
+        for rel, want in expected.items():
+            if open(self._host_path(rel), encoding="utf-8", newline="").read().replace("\r\n", "\n") != want.replace("\r\n", "\n"):
+                return False, f"{rel} differs from HEAD plus the recorded edits (changed some other way)"
+        return True, ""
+
+    def t_submit(self, report):
+        if not isinstance(report, dict):
+            return "error: report must be an object"
         problems = []
         if len(self.hypotheses) < 2:
             problems.append("record at least two competing hypotheses first")
@@ -193,20 +250,15 @@ class Toolset:
             problems.append(f"resolve every hypothesis (supported or rejected) first; still open: {', '.join(unresolved)}")
         if self.hypotheses and not any(v["status"] == "supported" for v in self.hypotheses.values()):
             problems.append("no hypothesis is supported; the root cause must be one of them")
-        for i, ed in enumerate(edits):
-            if not isinstance(ed, dict) or not all(isinstance(ed.get(k), str) for k in ("path", "search", "replace")):
-                problems.append(f"edit {i}: needs string fields path, search, replace")
-                continue
-            p = ed["path"]
-            if _bad_path(p) or not p.startswith(SCOPE):
-                problems.append(f"edit {i}: path must be under {SCOPE}")
-                continue
-            code, orig = self.sb.exec(["git", "show", f"HEAD:{p}"])
-            if code != 0:
-                problems.append(f"edit {i}: file not found at HEAD: {p}")
-            elif orig.count(ed["search"]) != 1:
-                problems.append(f"edit {i}: search text matches {orig.count(ed['search'])} times in {p} (needs exactly 1)")
+        if not self.edits:
+            problems.append("no fix applied; use apply_edit first")
+        elif self.last_tests_call < self.last_edit_call:
+            problems.append("run_tests has not been run since your last apply_edit")
+        elif not problems:
+            ok, why = self._workspace_matches_edits()
+            if not ok:
+                problems.append(why + "; reapply the change with apply_edit")
         if problems:
             return "rejected, fix and resubmit:\n" + "\n".join(problems)
-        self.submission = {"edits": edits, "report": report, "hypotheses": list(self.hypotheses.values())}
+        self.submission = {"edits": self.edits, "report": report, "hypotheses": list(self.hypotheses.values())}
         return "submitted"

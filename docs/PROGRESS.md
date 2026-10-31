@@ -59,7 +59,17 @@ results, limitations) for human review. No automatic merge or deploy.
 - Step 4 done: `record_hypothesis` and `update_hypothesis` in `tools/agent/tools.py`. Tool calls are numbered from 1;
   evidence must cite earlier call numbers (not the current or a future one). `submit` is refused until there are at least
   two hypotheses, none left open, and at least one supported. The submission carries the hypotheses. Tools hash is now `ffeb20f0...`.
-- Next: step 5, agent loop (Gemini function calling, budgets of 40 calls / 15 min / 200k tokens, 503 retry with log), plus step 6 transcript logger.
+- Step 5 and 6 done: `tools/agent/agent.py <case> <run_dir> [model]`. Gemini function calling (mode ANY), raw model content
+  (thought signatures) echoed back, budgets 40 calls / 15 min / 200k context tokens, each tool result ends with a budget line,
+  retry with identical request on 429/5xx/network (every retry logged), daily-quota 429 fails fast. Writes `transcript.jsonl`
+  (every model response and tool result), `run.json` (hashes), `submission.json`, `workspace.patch`, `result.json`.
+  Added tool `apply_edit` (edits the workspace so the fix can be tested); `submit(report)` now needs: 2+ hypotheses resolved with one
+  supported, an edit, a run_tests after the last edit, and a workspace that equals HEAD plus the recorded edits only.
+  Self-tests: `tools/agent/selftest_tools.py <case>` and `selftest_agent.py` (scripted fake model, no API), both pass.
+- Real smoke run (filelock-346): API accepted the tool schema and the agent ran 18 calls, then stopped on HTTP 429.
+  Cause: Gemini FREE TIER allows 20 requests per day per model. A run needs up to ~40 requests, so free tier is not enough.
+  Smoke run output was deleted (incomplete). **Blocker: need a paid key or billing on the project before real runs.**
+- Next: step 7 report schema, step 8 evidence checker, step 9 scoring, step 10 runs.
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.
