@@ -268,6 +268,7 @@ class LiveClient:
         self.consumed, self.waited = 0, 0.0
         self._last_send, self._last_tokens = None, 0
         self._pending = []  # messages read early, handled first by the next _read
+        self._turn_open = False  # a tool call was returned and its turn has not been closed yet
         self.system = ""
 
     def _socket(self):
@@ -314,10 +315,17 @@ class LiveClient:
         self._pending.append(m)
         return usage
 
+    @staticmethod
+    def _shape(m):
+        """Message type summary for the transcript (no content, no audio)."""
+        sc = m.get("serverContent") or {}
+        return "+".join(sorted(k for k in m if k != "serverContent")) + ("|" + "+".join(sorted(sc)) if sc else "")
+
     def _read(self):
-        texts, calls, usage = [], [], {}
+        texts, calls, usage, shapes = [], [], {}, []
         while True:
             m = self._next(300)
+            shapes.append(self._shape(m))
             upd = m.get("sessionResumptionUpdate") or {}
             if upd.get("resumable") and upd.get("newHandle"):
                 self.handle = upd["newHandle"]
@@ -327,14 +335,20 @@ class LiveClient:
                 usage = m["usageMetadata"]
             if "toolCall" in m:
                 calls = m["toolCall"].get("functionCalls", [])
-                usage = self._drain_turn_end(usage)
+                self._turn_open = True
                 break
             sc = m.get("serverContent") or {}
             if (sc.get("outputTranscription") or {}).get("text"):
                 texts.append(sc["outputTranscription"]["text"])
             texts += [p["text"] for p in (sc.get("modelTurn") or {}).get("parts", []) if "text" in p]
+            if sc.get("modelTurn") or texts:
+                self._turn_open = False  # the model has started a new answer
             if sc.get("turnComplete"):
+                if self._turn_open and not texts:
+                    self._turn_open = False  # this closes the previous tool-call turn, not a new empty answer
+                    continue
                 break
+        self.log("live_read", shapes=shapes)
         self._last_tokens = usage.get("promptTokenCount", 0)
         parts = ([{"text": "".join(texts)}] if texts else []) + [
             {"functionCall": {"id": c.get("id"), "name": c.get("name", ""), "args": c.get("args") or {}}} for c in calls]

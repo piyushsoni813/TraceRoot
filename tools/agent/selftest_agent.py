@@ -368,16 +368,29 @@ except agent.ApiError as e:
 # a separate empty turnComplete right after a tool call is not mistaken for an empty answer
 ws3 = FakeWS([{"setupComplete": {}},
               {"toolCall": {"functionCalls": [{"id": "k1", "name": "list_dir", "args": {}}]}},
+              {"serverContent": {"generationComplete": True}},
               {"serverContent": {"turnComplete": True}, "usageMetadata": {"promptTokenCount": 2600, "totalTokenCount": 2700}},
               {"toolCall": {"functionCalls": [{"id": "k2", "name": "read_file", "args": {"path": "src/a.py"}}]}}])
 agent.LiveClient.connect = lambda: ws3
-lv3 = agent.LiveClient("gemini-3.8-live", lambda e, **kw: None)
+lv3_log = []
+lv3 = agent.LiveClient("gemini-3.8-live", lambda e, **kw: lv3_log.append((e, kw)))
 h3 = [{"role": "user", "parts": [{"text": "bug"}]}]
 q1, _ = lv3.generate("SYS", h3)
-check("usage that arrives with the closing turnComplete is kept", q1["usageMetadata"]["promptTokenCount"] == 2600)
 h3 += [q1["candidates"][0]["content"], {"role": "user", "parts": [{"functionResponse": {"id": "k1", "name": "list_dir", "response": {"result": "a"}}}]}]
 q2, _ = lv3.generate("SYS", h3)
 check("the next turn returns the real tool call, not an empty answer", q2["candidates"][0]["content"]["parts"][0]["functionCall"]["id"] == "k2", q2)
+check("usage that arrives with the closing turnComplete is kept", q2["usageMetadata"]["promptTokenCount"] == 2600, q2["usageMetadata"])
+check("message shapes are logged without content", any(e == "live_read" and "serverContent" not in str(kw) and "toolCall" in str(kw) for e, kw in lv3_log), lv3_log)
+# 3.1-style: no separate turnComplete; a real empty answer after content still ends the turn
+ws4 = FakeWS([{"setupComplete": {}}, {"toolCall": {"functionCalls": [{"id": "z1", "name": "list_dir", "args": {}}]}},
+              {"serverContent": {"outputTranscription": {"text": "done"}}}, {"serverContent": {"turnComplete": True}}])
+agent.LiveClient.connect = lambda: ws4
+lv4 = agent.LiveClient("gemini-3.1-flash-live-preview", lambda e, **kw: None)
+h4 = [{"role": "user", "parts": [{"text": "bug"}]}]
+z1, _ = lv4.generate("SYS", h4)
+h4 += [z1["candidates"][0]["content"], {"role": "user", "parts": [{"functionResponse": {"id": "z1", "name": "list_dir", "response": {"result": "a"}}}]}]
+z2, _ = lv4.generate("SYS", h4)
+check("a spoken answer after a tool call still ends the turn", z2["candidates"][0]["content"]["parts"] == [{"text": "done"}], z2)
 agent.LiveClient.connect = lambda: FakeWS([{"error": "bad model"}])
 try:
     agent.LiveClient("gemini-x-live", lambda e, **kw: None).generate("SYS", [{"role": "user", "parts": [{"text": "x"}]}])
