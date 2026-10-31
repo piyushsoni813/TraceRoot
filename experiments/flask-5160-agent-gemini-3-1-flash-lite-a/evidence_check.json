@@ -1,0 +1,133 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 19,
+    "unverifiable": 1,
+    "contradicted": 0
+  },
+  "total": 20,
+  "verified_fraction": 0.95,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 14 is run_python with output",
+      "ref": "H1 -> call 14"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 14 is run_python with output",
+      "ref": "H2 -> call 14"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 19 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 14"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 22 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 19"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 23 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[2] -> call 22"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_find_package_path` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`__main__.__spec__` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec` appears in the transcript",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec` appears in the transcript",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(\"__main__\")` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`__main__.__spec__` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`try...except` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_find_package_path` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`root_mod_name` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/flask/scaffold.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

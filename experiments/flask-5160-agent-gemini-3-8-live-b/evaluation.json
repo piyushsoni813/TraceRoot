@@ -1,0 +1,22 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "no_submission",
+    "run_outcome": "no_submission"
+  },
+  "root_cause": null,
+  "evidence": null,
+  "cost": {
+    "tool_calls": 4,
+    "model_calls": 8,
+    "total_tokens": 11756,
+    "seconds": 30.1,
+    "active_seconds": 20.1,
+    "waited_seconds": 9.9,
+    "models_used": {
+      "gemini-3.8-live": 8
+    }
+  }
+}

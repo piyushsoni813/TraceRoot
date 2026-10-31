@@ -1,0 +1,22 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-live-extended-thinking",
+  "repair": {
+    "outcome": "no_submission",
+    "run_outcome": "no_submission"
+  },
+  "root_cause": null,
+  "evidence": null,
+  "cost": {
+    "tool_calls": 0,
+    "model_calls": 4,
+    "total_tokens": 21851,
+    "seconds": 39.1,
+    "active_seconds": 26.5,
+    "waited_seconds": 12.6,
+    "models_used": {
+      "gemini-3.8-live-extended-thinking": 4
+    }
+  }
+}

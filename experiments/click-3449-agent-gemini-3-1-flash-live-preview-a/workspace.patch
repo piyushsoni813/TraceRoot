@@ -1,0 +1,14 @@
+diff --git a/src/click/_termui_impl.py b/src/click/_termui_impl.py
+index 1d23026..075952c 100644
+--- a/src/click/_termui_impl.py
++++ b/src/click/_termui_impl.py
+@@ -390,6 +390,9 @@ class MaybeStripAnsi(io.TextIOWrapper):
+         super().__init__(stream, **kwargs)
+         self.color = color
+ 
++    def close(self) -> None:
++        self.detach()
++
+     def write(self, text: str) -> int:
+         if not self.color:
+             text = strip_ansi(text)

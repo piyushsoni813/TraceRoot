@@ -1,0 +1,20 @@
+diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py
+index 3c23ef97..d080515f 100644
+--- a/src/flask/scaffold.py
++++ b/src/flask/scaffold.py
+@@ -854,11 +854,14 @@ def _find_package_path(import_name):
+         else:
+             return os.path.dirname(root_spec.origin)
+ 
++    if root_mod_name == "__main__":
++        return os.getcwd()
++
+     # we were unable to find the `package_path` using PEP 451 loaders
+     spec = importlib.util.find_spec(root_mod_name)
+     loader = spec.loader if spec is not None else None
+ 
+-    if loader is None or root_mod_name == "__main__":
++    if loader is None:
+         # import name is not found, or interactive/main module
+         return os.getcwd()
+ 

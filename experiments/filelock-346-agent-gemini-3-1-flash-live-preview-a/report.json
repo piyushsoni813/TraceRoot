@@ -1,0 +1,108 @@
+{
+  "case_id": "filelock-346",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 31,
+    "seconds": 67.1,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "function": "FileLockMeta.__call__",
+    "mechanism": "The metaclass `FileLockMeta` was introduced to handle singleton locks and argument filtering for `__init__`. It explicitly added `lock_file` to the arguments passed to `cls.__init__`, even if the subclass `__init__` did not accept a parameter named `lock_file`, leading to a `TypeError`. Subclasses that take the lock file path as a positional argument or under a different keyword name were broken.",
+    "breaking_commit": "3a79343711eef57b864670dc2cafd352ed749d9b",
+    "file": "src/filelock/_api.py"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The metaclass `FileLockMeta` incorrectly filters arguments passed to `__init__`. It assumes that if `cls.__init__` does not have a parameter named `lock_file`, it should still pass it, leading to a `TypeError` when the subclass `__init__` has a differently named first parameter (like `file_path`).",
+      "predicts": "The reproduction script will fail with the reported TypeError.",
+      "status": "supported",
+      "evidence": "The reproduction script fails with TypeError: FilePathLock.__init__() got an unexpected keyword argument 'lock_file'. Tool call 15 confirms that inspect.signature(cls.__init__) returns parameters of the subclass __init__, which does not include 'lock_file' in the reproduction case. However, line 135 explicitly adds 'lock_file' to init_params, causing the TypeError.",
+      "calls": [
+        4,
+        15
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The metaclass `FileLockMeta` fails to pass the positional argument `lock_file` correctly to the subclass `__init__`. By forcing it as a keyword argument `lock_file=...` when calling `super().__call__(**init_params)`, it clashes with subclasses that expect the lock file path as a positional argument or under a different keyword name.",
+      "predicts": "The reproduction script will fail with the reported TypeError.",
+      "status": "supported",
+      "evidence": "The error is indeed about 'lock_file' being passed as an unexpected keyword argument. H1 provides a more detailed explanation of why this happens (explicit addition in line 135).",
+      "calls": [
+        4
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 4,
+      "tool": "run_python",
+      "args": {
+        "code": "import tempfile\nfrom filelock import FileLock\n\nclass FilePathLock(FileLock):\n    def __init__(self, file_path):\n        super().__init__(file_path + \".lock\")\n\nwith tempfile.TemporaryDirectory() as d:\n    path = d + \"/a\"\n    try:\n        lock = FilePathLock(path)\n        print(lock.lock_file == path + \".lock\")\n    except Exception as e:\n        print(e)\n"
+      },
+      "excerpt": "[exit 0]\nFilePathLock.__init__() got an unexpected keyword argument 'lock_file'\nException ignored in: <function BaseFileLock.__del__ at 0x7dbc7a3ca7a0>\nTraceback (most recent call last):\n  File \"/work/src/filelock/_api.py\", line 400, in __del__\n    self.release(force=True)\n  File \"/work/src/filelock/_api.py\", line 361, in release\n    if self.is_locked:\n  File \"/work/src/filelock/_api.py\", line 267"
+    },
+    {
+      "call": 15,
+      "tool": "run_python",
+      "args": {
+        "code": "import inspect\n\nclass Base:\n    def __init__(self, a, b=1):\n        pass\n\nclass Sub(Base):\n    def __init__(self, c):\n        super().__init__(c + 1)\n\nsig = inspect.signature(Sub.__init__)\nprint(f\"Sub parameters: {sig.parameters}\")\nprint(f\"'c' in Sub parameters: {'c' in sig.parameters}\")\nprint(f\"'a' in Sub parameters: {'a' in sig.parameters}\")\n"
+      },
+      "excerpt": "[exit 0]\nSub parameters: OrderedDict({'self': <Parameter \"self\">, 'c': <Parameter \"c\">})\n'c' in Sub parameters: True\n'a' in Sub parameters: False\n"
+    },
+    {
+      "call": 23,
+      "tool": "run_python",
+      "args": {
+        "code": "import tempfile\nfrom filelock import FileLock\n\nclass FilePathLock(FileLock):\n    def __init__(self, file_path):\n        super().__init__(file_path + \".lock\")\n\nwith tempfile.TemporaryDirectory() as d:\n    path = d + \"/a\"\n    try:\n        lock = FilePathLock(path)\n        print(lock.lock_file == path + \".lock\")\n    except Exception as e:\n        print(f\"Caught exception: {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nTrue\n"
+    },
+    {
+      "call": 30,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_filelock.py",
+          "tests/test_error.py",
+          "tests/test_async_filelock.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n............................ssssssssssssssssssss........................ [ 47%]\n......................................ssssssssssssssssssssssssssssssssss [ 94%]\nsssssssss                                                                [100%]\n=============================== warnings summary ===============================\ntests/test_async_filelock.py:14\n  /work/tests/test_async_filelock.py:1"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/filelock/_api.py",
+        "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)",
+        "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n        else:\n            params = list(inspect.signature(cls.__init__).parameters.values())\n            if len(params) > 1:  # params[0] is self\n                init_params[params[1].name] = lock_file\n\n        instance = super().__call__(**init_params)"
+      },
+      {
+        "path": "src/filelock/_api.py",
+        "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n        else:\n            params = list(inspect.signature(cls.__init__).parameters.values())\n            if len(params) > 1:  # params[0] is self\n                init_params[params[1].name] = lock_file\n\n        instance = super().__call__(**init_params)",
+        "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n        else:\n            params = list(inspect.signature(cls.__init__).parameters.values())\n            if len(params) > 1:  # params[0] is self\n                if params[1].kind == inspect.Parameter.VAR_POSITIONAL:\n                    init_params[\"lock_file\"] = lock_file\n                else:\n                    init_params[params[1].name] = lock_file\n\n        instance = super().__call__(**init_params)"
+      }
+    ],
+    "diff": "diff --git a/src/filelock/_api.py b/src/filelock/_api.py\nindex 7db0e01..11c0408 100644\n--- a/src/filelock/_api.py\n+++ b/src/filelock/_api.py\n@@ -132,7 +132,15 @@ class FileLockMeta(ABCMeta):\n         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n         init_params = {key: value for key, value in all_params.items() if key in present_params}\n         # The `lock_file` parameter is required\n-        init_params[\"lock_file\"] = lock_file\n+        if \"lock_file\" in present_params:\n+            init_params[\"lock_file\"] = lock_file\n+        else:\n+            params = list(inspect.signature(cls.__init__).parameters.values())\n+            if len(params) > 1:  # params[0] is self\n+                if params[1].kind == inspect.Parameter.VAR_POSITIONAL:\n+                    init_params[\"lock_file\"] = lock_file\n+                else:\n+                    init_params[params[1].name] = lock_file\n \n         instance = super().__call__(**init_params)\n \n"
+  },
+  "verification": [
+    {
+      "command": "run_python reproduction script",
+      "result": "True",
+      "call": 23
+    },
+    {
+      "call": 30,
+      "command": "run_tests tests/test_filelock.py tests/test_error.py tests/test_async_filelock.py",
+      "result": "90 passed, 63 skipped"
+    }
+  ],
+  "limitations": [
+    "Could not run tests/test_virtualenv.py due to missing 'virtualenv' module in the environment."
+  ],
+  "decision": "ready for human review"
+}

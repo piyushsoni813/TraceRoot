@@ -1,0 +1,113 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "41 passed in 0.40s"
+    ],
+    "applied_diff": "diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..d080515f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -854,11 +854,14 @@ def _find_package_path(import_name):\n         else:\n             return os.path.dirname(root_spec.origin)\n \n+    if root_mod_name == \"__main__\":\n+        return os.getcwd()\n+\n     # we were unable to find the `package_path` using PEP 451 loaders\n     spec = importlib.util.find_spec(root_mod_name)\n     loader = spec.loader if spec is not None else None\n \n-    if loader is None or root_mod_name == \"__main__\":\n+    if loader is None:\n         # import name is not found, or interactive/main module\n         return os.getcwd()\n \n"
+  },
+  "root_cause": {
+    "status": "match",
+    "commit_match": true,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/flask/helpers.py",
+      "src/flask/scaffold.py"
+    ],
+    "claimed": {
+      "file": "src/flask/scaffold.py",
+      "function": "_find_package_path",
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+    },
+    "needs_human_review": false
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 8,
+      "unverifiable": 2,
+      "contradicted": 0
+    },
+    "total": 10,
+    "verified_fraction": 0.8,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 4 is run_python with output",
+        "ref": "H1 -> call 4"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 8 is run_python with output",
+        "ref": "H1 -> call 8"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 12 is apply_edit, which produces no evidence",
+        "ref": "H2 -> call 12"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 15 is run_tests with output",
+        "ref": "H2 -> call 15"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "cited call is not a test or script run",
+        "ref": "verification[0] -> call 15"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 15 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 12"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0 appears in a git output",
+        "ref": "root_cause.breaking_commit"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/flask/scaffold.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 20,
+    "model_calls": 20,
+    "total_tokens": 111779,
+    "seconds": 117.6,
+    "active_seconds": 42.4,
+    "waited_seconds": 75.3,
+    "models_used": {
+      "gemini-3.8-live": 20
+    }
+  }
+}

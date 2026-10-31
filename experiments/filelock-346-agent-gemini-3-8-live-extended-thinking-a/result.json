@@ -1,0 +1,13 @@
+{
+  "outcome": "no_submission",
+  "tool_calls": 0,
+  "model_calls": 4,
+  "seconds": 36.9,
+  "active_seconds": 24.5,
+  "waited_seconds": 12.4,
+  "models_used": {
+    "gemini-3.8-live-extended-thinking": 4
+  },
+  "total_tokens": 22989,
+  "last_context_tokens": 5936
+}

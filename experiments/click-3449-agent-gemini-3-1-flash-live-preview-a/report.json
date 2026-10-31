@@ -1,0 +1,108 @@
+{
+  "case_id": "click-3449",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 35,
+    "seconds": 40.7,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "function": "MaybeStripAnsi",
+    "file": "src/click/_termui_impl.py",
+    "mechanism": "MaybeStripAnsi inherits from io.TextIOWrapper and does not override close(). When echo_via_pager finishes, it closes the pager stream, which is an instance of MaybeStripAnsi. This closes the underlying stream, which in CliRunner tests is the captured stdout. This causes sys.stdout.flush() to fail later in CliRunner.invoke."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The `MaybeStripAnsi` class in `src/click/_termui_impl.py` inherits from `io.TextIOWrapper` and does not override `close()`. When `echo_via_pager` finishes, it closes the `MaybeStripAnsi` instance, which in turn closes the underlying `BytesIO` buffer (wrapped in `_NamedTextIOWrapper` and `_FixupStream`). This causes `sys.stdout.flush()` to fail later in `CliRunner.invoke`.",
+      "predicts": "If I modify `src/click/_termui_impl.py` to prevent `MaybeStripAnsi` from closing its underlying stream, the reproduction script should pass.",
+      "status": "supported",
+      "evidence": "Applying the fix to MaybeStripAnsi to prevent closing the underlying stream resolved the issue in the reproduction script.",
+      "calls": [
+        29,
+        30
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The issue is that `sys.stdout` is closed when `CliRunner.invoke` tries to flush it. Catching the exception in `CliRunner.invoke` would prevent the crash.",
+      "predicts": "If I modify `CliRunner.invoke` in `src/click/testing.py` to catch `ValueError` during `sys.stdout.flush()`, the reproduction script should pass.",
+      "status": "rejected",
+      "evidence": "The fix in H1 worked, suggesting that the root cause was indeed the closing of the stream, not just the failure to flush. While catching the exception in CliRunner.invoke (H2) might have masked the symptom, fixing the stream closing is the correct approach.",
+      "calls": [
+        29,
+        30
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 29,
+      "tool": "apply_edit",
+      "args": {
+        "search": "class MaybeStripAnsi(io.TextIOWrapper):\n    def __init__(self, stream: t.IO[bytes], *, color: bool, **kwargs: t.Any):\n        super().__init__(stream, **kwargs)\n        self.color = color\n\n    def write(self, text: str) -> int:",
+        "replace": "class MaybeStripAnsi(io.TextIOWrapper):\n    def __init__(self, stream: t.IO[bytes], *, color: bool, **kwargs: t.Any):\n        super().__init__(stream, **kwargs)\n        self.color = color\n\n    def close(self) -> None:\n        self.detach()\n\n    def write(self, text: str) -> int:",
+        "path": "src/click/_termui_impl.py"
+      },
+      "excerpt": "applied edit 1 to src/click/_termui_impl.py. Run tests to check it."
+    },
+    {
+      "call": 30,
+      "tool": "run_python",
+      "args": {
+        "code": "from click import command, echo_via_pager\nfrom click.testing import CliRunner\nimport sys\n\n@command()\ndef cli():\n    echo_via_pager(\"Hello, Click!\")\n\ntry:\n    result = CliRunner().invoke(cli)\n    print(repr(result.output))\nexcept ValueError as e:\n    print(f\"Caught ValueError: {e}\")\n    import traceback\n    traceback.print_exc()\nexcept Exception as e:\n    print(f\"Caught unexpected exception: {e}\")\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\n'Hello, Click!\\n'\n"
+    },
+    {
+      "call": 33,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_testing.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n..............................s...........                               [100%]\n41 passed, 1 skipped in 0.77s\n"
+    },
+    {
+      "call": 34,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_termui.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n............................................sssssssssssssssssssss....... [ 30%]\n.........ss............................................................. [ 60%]\n........................................................................ [ 91%]\n.....................                                                    [100%]\n214 passed, 23 skipped in 1.16s\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/click/_termui_impl.py",
+        "search": "class MaybeStripAnsi(io.TextIOWrapper):\n    def __init__(self, stream: t.IO[bytes], *, color: bool, **kwargs: t.Any):\n        super().__init__(stream, **kwargs)\n        self.color = color\n\n    def write(self, text: str) -> int:",
+        "replace": "class MaybeStripAnsi(io.TextIOWrapper):\n    def __init__(self, stream: t.IO[bytes], *, color: bool, **kwargs: t.Any):\n        super().__init__(stream, **kwargs)\n        self.color = color\n\n    def close(self) -> None:\n        self.detach()\n\n    def write(self, text: str) -> int:"
+      }
+    ],
+    "diff": "diff --git a/src/click/_termui_impl.py b/src/click/_termui_impl.py\nindex 1d23026..075952c 100644\n--- a/src/click/_termui_impl.py\n+++ b/src/click/_termui_impl.py\n@@ -390,6 +390,9 @@ class MaybeStripAnsi(io.TextIOWrapper):\n         super().__init__(stream, **kwargs)\n         self.color = color\n \n+    def close(self) -> None:\n+        self.detach()\n+\n     def write(self, text: str) -> int:\n         if not self.color:\n             text = strip_ansi(text)\n"
+  },
+  "verification": [
+    {
+      "result": "'Hello, Click!\\n'",
+      "call": 30,
+      "command": "run_python reproduction script"
+    },
+    {
+      "call": 33,
+      "command": "run_tests tests/test_testing.py",
+      "result": "41 passed, 1 skipped"
+    },
+    {
+      "call": 34,
+      "command": "run_tests tests/test_termui.py",
+      "result": "214 passed, 23 skipped"
+    }
+  ],
+  "limitations": [],
+  "decision": "ready for human review"
+}

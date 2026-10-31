@@ -1,0 +1,54 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "        return tuple(canonicalize_name(v) for v in values)",
+      "replace": "        return tuple(canonicalize_name(v) if v is not None else \"\" for v in values)"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "function": "_normalize",
+      "breaking_commit": "1aa82a856a1d6fbc7b111b4896a2fd28c7cdccc5",
+      "file": "src/packaging/markers.py",
+      "mechanism": "The `_normalize` function, introduced in commit 53dbb257, calls `canonicalize_name` on values when the key is \"extra\". Commit 1aa82a85 removed the `_get_env` function, which previously handled `None` values by raising an `UndefinedEnvironmentName` exception. This change allowed `None` to be passed directly to `_normalize` for the \"extra\" key, which then passed `None` to `canonicalize_name`. `canonicalize_name` expects a string or bytes-like object, but received `NoneType`, leading to a TypeError."
+    },
+    "limitations": [],
+    "verification": [
+      {
+        "result": "2221 passed in 3.99s",
+        "call": 16,
+        "command": "run_tests(selection = [\"tests/test_markers.py\"])"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The _normalize function was recently changed to call canonicalize_name without checking for None values.",
+      "predicts": "git_blame on src/packaging/markers.py lines 118-127 will show a recent commit that introduced the call to canonicalize_name or removed a None check.",
+      "status": "supported",
+      "evidence": "git_blame (call 7) shows commit 53dbb257 introduced _normalize and the call to canonicalize_name. git_show (call 9) confirms that _normalize does not check for None.",
+      "calls": [
+        7,
+        9
+      ],
+      "recorded_at_call": 5,
+      "updated_at_call": 11
+    },
+    {
+      "id": "H2",
+      "text": "The _evaluate_markers function was recently changed to pass None to _normalize for the \"extra\" key.",
+      "predicts": "git_blame on src/packaging/markers.py lines 143-150 will show a recent commit that changed how lhs_value or rhs_value are assigned, allowing None for \"extra\".",
+      "status": "supported",
+      "evidence": "git_blame (call 8) shows commit 1aa82a85 changed how environment variables are accessed. git_show (call 10) confirms that _get_env was removed, allowing None to be passed directly to _normalize.",
+      "calls": [
+        8,
+        10
+      ],
+      "recorded_at_call": 6,
+      "updated_at_call": 12
+    }
+  ],
+  "decision": "ready for human review"
+}

@@ -1,0 +1,13 @@
+{
+  "outcome": "api_error",
+  "tool_calls": 16,
+  "model_calls": 16,
+  "seconds": 871.5,
+  "active_seconds": 139.8,
+  "waited_seconds": 731.8,
+  "models_used": {
+    "gemini-3.1-flash-lite": 16
+  },
+  "total_tokens": 80571,
+  "last_context_tokens": 9011
+}

@@ -1,0 +1,22 @@
+{
+  "case_id": "attrs-1416",
+  "model": "gemini-3.8-live",
+  "tools_hash": "bf52a6e2ff4d043f6408548d1d5ffa86838add3e612b4bebd6cae9371a4eee0f",
+  "system_prompt_sha256": "a23d26b2baed9c177d47e2f10a66a99bbd16732321c7b0d833d949a296828747",
+  "user_prompt_sha256": "d26144829b44ee7ff62ae7232fe30d21b2b7040e1650a7e06168b2a8a727d60a",
+  "gen_config": {
+    "temperature": 0,
+    "topP": 1,
+    "topK": 1,
+    "maxOutputTokens": 16384
+  },
+  "limits": {
+    "tool_calls": 40,
+    "active_seconds": 900,
+    "wall_seconds": 3600,
+    "context_tokens": 200000,
+    "note": "time spent waiting on rate limits is excluded from active_seconds"
+  },
+  "sandbox_image": "traceroot-sandbox:1",
+  "code_commit": "a7f25b9"
+}

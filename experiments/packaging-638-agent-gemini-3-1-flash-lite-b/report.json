@@ -1,0 +1,119 @@
+{
+  "case_id": "packaging-638",
+  "model": "gemini-3.1-flash-lite",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 15,
+    "seconds": 220.4,
+    "total_tokens": 59002
+  },
+  "root_cause": {
+    "mechanism": "The _normalize function was unconditionally calling canonicalize_name on values when the key was 'extra'. When 'extra' was None, canonicalize_name raised a TypeError because it expects a string. The fix is to check if the value is None before calling canonicalize_name.",
+    "function": "_normalize",
+    "file": "src/packaging/markers.py"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The _normalize function blindly calls canonicalize_name on values when key is 'extra', but it doesn't check if the value is None. If it's None, it should probably be treated as not matching or handled gracefully.",
+      "predicts": "If I change _normalize to handle None by returning it as is (or converting to empty string), the TypeError will be gone and it will return False.",
+      "status": "supported",
+      "evidence": "The code fails when 'extra' is None, but works when it is a string. The failure is in _normalize which calls canonicalize_name on the value. If the value is None, it should probably not be canonicalized, or it should be handled. If I change _normalize to handle None, it should fix the issue.",
+      "calls": [
+        1,
+        6,
+        7
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The environment dictionary contains None values which are not expected by the marker evaluation logic. Filtering them out might be the correct approach.",
+      "predicts": "If I change _evaluate_markers to filter out None values from the environment before passing them to _normalize, it might fix the issue.",
+      "status": "rejected",
+      "evidence": "Filtering out None from the environment in _evaluate_markers might be tricky because the environment is used for other markers too. If I filter it out, I might break other things. H1 seems more direct.",
+      "calls": [
+        5
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 1,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.markers import Marker\n\ntry:\n    marker = Marker('extra == \"opt-feature\"')\n    print(marker.evaluate({\"extra\": None}))\nexcept Exception as e:\n    print(e)\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nexpected string or bytes-like object, got 'NoneType'\nTraceback (most recent call last):\n  File \"<string>\", line 5, in <module>\n    print(marker.evaluate({\"extra\": None}))\n          ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/work/src/packaging/markers.py\", line 241, in evaluate\n    return _evaluate_markers(self._markers, current_environment)\n  File \"/work/src/packaging/markers.py\", line 150"
+    },
+    {
+      "call": 5,
+      "tool": "read_file",
+      "args": {
+        "end": 160,
+        "path": "src/packaging/markers.py",
+        "start": 130
+      },
+      "excerpt": "130\tdef _evaluate_markers(markers: MarkerList, environment: Dict[str, str]) -> bool:\n131\t    groups: List[List[bool]] = [[]]\n132\t\n133\t    for marker in markers:\n134\t        assert isinstance(marker, (list, tuple, str))\n135\t\n136\t        if isinstance(marker, list):\n137\t            groups[-1].append(_evaluate_markers(marker, environment))\n138\t        elif isinstance(marker, tuple):\n139\t            l"
+    },
+    {
+      "call": 6,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.markers import Marker\n# Check what happens if we pass a string instead of None\nmarker = Marker('extra == \"opt-feature\"')\nprint(f\"None: {marker.evaluate({'extra': None})}\")\n"
+      },
+      "excerpt": "[exit 1]\nTraceback (most recent call last):\n  File \"<string>\", line 4, in <module>\n    print(f\"None: {marker.evaluate({'extra': None})}\")\n                   ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/work/src/packaging/markers.py\", line 241, in evaluate\n    return _evaluate_markers(self._markers, current_environment)\n  File \"/work/src/packaging/markers.py\", line 150, in _evaluate_markers\n    lhs_va"
+    },
+    {
+      "call": 7,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.markers import Marker\n# Check what happens if we pass a string instead of None\nmarker = Marker('extra == \"opt-feature\"')\ntry:\n    print(f\"String: {marker.evaluate({'extra': 'opt-feature'})}\")\nexcept Exception as e:\n    print(f\"String failed: {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nString: True\n"
+    },
+    {
+      "call": 11,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.markers import Marker\n\nmarker = Marker('extra == \"opt-feature\"')\ntry:\n    result = marker.evaluate({\"extra\": None})\n    print(f\"Result: {result}\")\nexcept Exception as e:\n    print(f\"Failed: {e}\")\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nResult: False\n"
+    },
+    {
+      "call": 14,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_markers.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [  3%]\n........................................................................ [  6%]\n........................................................................ [  9%]\n........................................................................ [ 12%]\n......................................................................."
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/packaging/markers.py",
+        "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)\n",
+        "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n"
+      }
+    ],
+    "diff": "diff --git a/src/packaging/markers.py b/src/packaging/markers.py\nindex a5bf35c..8c91548 100644\n--- a/src/packaging/markers.py\n+++ b/src/packaging/markers.py\n@@ -121,7 +121,7 @@ def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n     # > When comparing extra names, tools MUST normalize the names being\n     # > compared using the semantics outlined in PEP 503 for names\n     if key == \"extra\":\n-        return tuple(canonicalize_name(v) for v in values)\n+        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n \n     # other environment markers don't have such standards\n     return values\n"
+  },
+  "verification": [
+    {
+      "command": "python reproduction script",
+      "call": 11,
+      "result": "Result: False"
+    },
+    {
+      "command": "pytest tests/test_markers.py",
+      "result": "2221 passed in 4.26s",
+      "call": 14
+    }
+  ],
+  "limitations": [
+    "None identified. The fix is simple and verified by the reproduction script and existing tests."
+  ],
+  "decision": "ready for human review"
+}

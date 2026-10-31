@@ -1,0 +1,131 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "filelock-346",
+  "model": "gemini-3.8-flash,gemini-3-flash-preview,gemini-2.5-flash",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "104 passed, 3 skipped, 1076 warnings in 59.43s"
+    ],
+    "applied_diff": "diff --git a/src/filelock/_api.py b/src/filelock/_api.py\nindex 7db0e01..40a47f0 100644\n--- a/src/filelock/_api.py\n+++ b/src/filelock/_api.py\n@@ -129,10 +129,34 @@ class FileLockMeta(ABCMeta):\n             **kwargs,\n         }\n \n-        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n-        init_params = {key: value for key, value in all_params.items() if key in present_params}\n-        # The `lock_file` parameter is required\n-        init_params[\"lock_file\"] = lock_file\n+        present_params = inspect.signature(cls.__init__).parameters\n+        init_params = {}\n+        remaining_all_params = all_params.copy()\n+\n+        # Determine the name of the parameter that should receive the lock file path\n+        lock_file_arg_name = \"lock_file\"  # Default to 'lock_file'\n+        for name, param in present_params.items():\n+            if name == \"self\":\n+                continue\n+            if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):\n+                lock_file_arg_name = name\n+                break\n+\n+        # Map the 'lock_file' value from all_params to the determined lock_file_arg_name\n+        if lock_file_arg_name in present_params or present_params.get(\"kwargs\"):\n+            init_params[lock_file_arg_name] = remaining_all_params.pop(\"lock_file\")\n+\n+        # Add other parameters that are present in the subclass's __init__\n+        for key, value in remaining_all_params.items():\n+            if key in present_params:\n+                init_params[key] = value\n+            elif present_params.get(\"kwargs\"):\n+                init_params.setdefault(\"kwargs\", {})[key] = value\n+\n+        # If 'kwargs' is in init_params, unpack it before passing to super().__call__\n+        if \"kwargs\" in init_params:\n+            kwargs_to_pass = init_params.pop(\"kwargs\")\n+            init_params.update(kwargs_to_pass)\n \n         instance = super().__call__(**init_params)\n \n"
+  },
+  "root_cause": {
+    "status": "likely",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/filelock/_api.py"
+    ],
+    "claimed": {
+      "file": "src/filelock/_api.py",
+      "function": "FileLockMeta.__call__",
+      "breaking_commit": "3a79343711eef57b864670dc2cafd352ed749d9b"
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 10,
+      "unverifiable": 3,
+      "contradicted": 0
+    },
+    "total": 13,
+    "verified_fraction": 0.769,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 14 is run_python with output",
+        "ref": "H1 -> call 14"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 14 is run_python with output",
+        "ref": "H2 -> call 14"
+      },
+      {
+        "kind": "verification",
+        "status": "unverifiable",
+        "detail": "call 19 ran before the last edit (call 26)",
+        "ref": "verification[0] -> call 14"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 27 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 19"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`BaseFileLock` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`inspect.signature(cls.__init__).parameters` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "3a79343 appears in a git output",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "3a79343711eef57b864670dc2cafd352ed749d9b appears in a git output",
+        "ref": "root_cause.breaking_commit"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/filelock/_api.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 28,
+    "model_calls": 28,
+    "total_tokens": 287622,
+    "seconds": 520.4,
+    "active_seconds": 378.8,
+    "waited_seconds": 141.6,
+    "models_used": {
+      "gemini-3-flash-preview": 17,
+      "gemini-2.5-flash": 11
+    }
+  }
+}

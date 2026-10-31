@@ -1,0 +1,115 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": true,
+  "counts": {
+    "verified": 17,
+    "unverifiable": 0,
+    "contradicted": 0
+  },
+  "total": 17,
+  "verified_fraction": 1.0,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 7 is git_blame with output",
+      "ref": "H1 -> call 7"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 9 is git_show with output",
+      "ref": "H1 -> call 9"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 8 is git_blame with output",
+      "ref": "H2 -> call 8"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 10 is git_show with output",
+      "ref": "H2 -> call 10"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 16 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 10"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`UndefinedEnvironmentName` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "1aa82a85 appears in a git output",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "53dbb257 appears in a git output",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "53dbb257 appears in a git output",
+      "ref": "H1.evidence"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "1aa82a85 appears in a git output",
+      "ref": "H2.evidence"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "1aa82a856a1d6fbc7b111b4896a2fd28c7cdccc5 appears in a git output",
+      "ref": "root_cause.breaking_commit"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/packaging/markers.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..11c0408 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -132,7 +132,15 @@ class FileLockMeta(ABCMeta):
+         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+         init_params = {key: value for key, value in all_params.items() if key in present_params}
+         # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
++        if "lock_file" in present_params:
++            init_params["lock_file"] = lock_file
++        else:
++            params = list(inspect.signature(cls.__init__).parameters.values())
++            if len(params) > 1:  # params[0] is self
++                if params[1].kind == inspect.Parameter.VAR_POSITIONAL:
++                    init_params["lock_file"] = lock_file
++                else:
++                    init_params[params[1].name] = lock_file
+ 
+         instance = super().__call__(**init_params)
+ 

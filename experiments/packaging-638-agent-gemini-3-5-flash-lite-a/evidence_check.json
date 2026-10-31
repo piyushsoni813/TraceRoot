@@ -1,12 +1,13 @@
 {
+  "checker_commit": "a7f25b9",
   "passed": false,
   "counts": {
-    "verified": 6,
-    "unverifiable": 8,
+    "verified": 7,
+    "unverifiable": 4,
     "contradicted": 0
   },
-  "total": 14,
-  "verified_fraction": 0.429,
+  "total": 11,
+  "verified_fraction": 0.636,
   "items": [
     {
       "kind": "hypothesis_call",
@@ -46,26 +47,8 @@
     },
     {
       "kind": "quote",
-      "status": "unverifiable",
-      "detail": "` unconditionally called ` appears nowhere in the transcript",
-      "ref": "root_cause.mechanism"
-    },
-    {
-      "kind": "quote",
-      "status": "unverifiable",
-      "detail": "` on all values. When ` appears nowhere in the transcript",
-      "ref": "root_cause.mechanism"
-    },
-    {
-      "kind": "quote",
-      "status": "unverifiable",
-      "detail": "` was passed as ` appears nowhere in the transcript",
-      "ref": "root_cause.mechanism"
-    },
-    {
-      "kind": "quote",
-      "status": "unverifiable",
-      "detail": "` in the environment, ` appears nowhere in the transcript",
+      "status": "verified",
+      "detail": "`canonicalize_name(v)` appears in the transcript",
       "ref": "root_cause.mechanism"
     },
     {

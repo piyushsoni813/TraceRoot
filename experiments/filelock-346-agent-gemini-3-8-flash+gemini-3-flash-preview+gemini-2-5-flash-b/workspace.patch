@@ -1,0 +1,43 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..40a47f0 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -129,10 +129,34 @@ class FileLockMeta(ABCMeta):
+             **kwargs,
+         }
+ 
+-        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+-        init_params = {key: value for key, value in all_params.items() if key in present_params}
+-        # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
++        present_params = inspect.signature(cls.__init__).parameters
++        init_params = {}
++        remaining_all_params = all_params.copy()
++
++        # Determine the name of the parameter that should receive the lock file path
++        lock_file_arg_name = "lock_file"  # Default to 'lock_file'
++        for name, param in present_params.items():
++            if name == "self":
++                continue
++            if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY):
++                lock_file_arg_name = name
++                break
++
++        # Map the 'lock_file' value from all_params to the determined lock_file_arg_name
++        if lock_file_arg_name in present_params or present_params.get("kwargs"):
++            init_params[lock_file_arg_name] = remaining_all_params.pop("lock_file")
++
++        # Add other parameters that are present in the subclass's __init__
++        for key, value in remaining_all_params.items():
++            if key in present_params:
++                init_params[key] = value
++            elif present_params.get("kwargs"):
++                init_params.setdefault("kwargs", {})[key] = value
++
++        # If 'kwargs' is in init_params, unpack it before passing to super().__call__
++        if "kwargs" in init_params:
++            kwargs_to_pass = init_params.pop("kwargs")
++            init_params.update(kwargs_to_pass)
+ 
+         instance = super().__call__(**init_params)
+ 

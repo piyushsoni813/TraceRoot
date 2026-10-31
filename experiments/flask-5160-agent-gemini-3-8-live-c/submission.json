@@ -1,0 +1,61 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None\n\n    if loader is None or root_mod_name == \"__main__\":\n        # import name is not found, or interactive/main module\n        return os.getcwd()",
+      "replace": "    if root_mod_name == \"__main__\":\n        return os.getcwd()\n\n    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None\n\n    if loader is None:\n        # import name is not found, or interactive/main module\n        return os.getcwd()"
+    }
+  ],
+  "report": {
+    "limitations": [
+      "The fix assumes that if the module is named __main__, we should return the current working directory, which matches the previous behavior using pkgutil.get_loader."
+    ],
+    "verification": [
+      {
+        "call": 12,
+        "result": "Applied fix to src/flask/scaffold.py",
+        "command": "apply_edit"
+      },
+      {
+        "call": 15,
+        "command": "run_tests tests/test_basic.py",
+        "result": "Passed all tests in test_basic.py"
+      }
+    ],
+    "root_cause": {
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0",
+      "mechanism": "The change from pkgutil.get_loader to importlib.util.find_spec caused a ValueError when called with \"__main__\" because __main__.__spec__ is None in scripts.",
+      "file": "src/flask/scaffold.py",
+      "function": "_find_package_path"
+    }
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The second call to importlib.util.find_spec at line 858 in src/flask/scaffold.py is not protected by a try-except block, causing ValueError from __main__ to propagate and crash the app initialization.",
+      "predicts": "Wrapping the second find_spec call in a try-except block or handling __main__ before it will prevent the ValueError and allow falling back to returning os.getcwd().",
+      "status": "supported",
+      "evidence": "Confirmed that find_spec(\"__main__\") raises ValueError.",
+      "calls": [
+        4,
+        8
+      ],
+      "recorded_at_call": 9,
+      "updated_at_call": 19
+    },
+    {
+      "id": "H2",
+      "text": "We should explicitly check if root_mod_name == \"__main__\" before attempting to call importlib.util.find_spec at line 858, similar to how it was implicitly handled when using pkgutil.get_loader.",
+      "predicts": "Changing the second find_spec to check if root_mod_name == \"__main__\" before calling find_spec will avoid the ValueError.",
+      "status": "supported",
+      "evidence": "Applying the fix resolved the ValueError when initializing Flask(__name__) in scripts and passed existing tests in test_basic.py.",
+      "calls": [
+        12,
+        15
+      ],
+      "recorded_at_call": 10,
+      "updated_at_call": 18
+    }
+  ],
+  "decision": "ready for human review"
+}

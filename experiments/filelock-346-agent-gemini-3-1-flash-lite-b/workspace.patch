@@ -1,0 +1,28 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..c6498c9 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -129,12 +129,18 @@ class FileLockMeta(ABCMeta):
+             **kwargs,
+         }
+ 
+-        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
++        present_params = inspect.signature(cls.__init__).parameters  # type: ignore[misc]
+         init_params = {key: value for key, value in all_params.items() if key in present_params}
+-        # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
+-
+-        instance = super().__call__(**init_params)
++        
++        # The `lock_file` parameter is required.
++        if "lock_file" in present_params:
++            init_params["lock_file"] = lock_file
++            instance = super().__call__(**init_params)
++        else:
++            # If the subclass doesn't accept `lock_file`, we need to pass it in a way
++            # that it can be received.
++            # We call it with the lock_file as a positional argument.
++            instance = super().__call__(lock_file, **init_params)
+ 
+         if is_singleton:
+             cls._instances[str(lock_file)] = instance  # type: ignore[attr-defined]

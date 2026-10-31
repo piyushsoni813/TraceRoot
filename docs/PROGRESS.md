@@ -119,7 +119,13 @@ results, limitations) for human review. No automatic merge or deploy.
 - Drivers started 2026-10-31, each as its own column (one model per run, except the labelled Flash chain):
   gemini-3.5-flash-lite, gemini-3.1-flash-lite, Flash chain (3.8, 3, 2.5 Flash), gemini-3.8-live, gemini-3.1-flash-live-preview,
   gemini-3.8-live-extended-thinking.
-- Next: step 10, real runs on the free tier (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
+- Step 10 runs done for today (2026-10-31). Results table is in README.md ("Investigator agent results"), generated from the
+  run directories. Solved (independent evaluator): 3.1 Flash Live 4/5, 3.5 Flash Lite 3/5, 3.1 Flash Lite 2/5, 3.8 Live 2/5,
+  Flash chain 2/5 (2 of 3 attempted). All five cases solved by at least one driver. flask root cause `match` for 3.1 Flash Live and 3.8 Live.
+  All runs were re-scored with evidence checker a7f25b9 (two false positives fixed); raw outputs untouched.
+- Open: Flash chain click and flask (and attrs) need the next daily quota; a person should review `likely`/`partial` root causes;
+  3.1 Flash Lite attrs lost twice to HTTP 503.
+- Next: step 10 follow-ups above (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
   tweak to batch independent calls (not done; it changes behaviour, so decide before the first real run).
 
 ## Not yet done / known gaps

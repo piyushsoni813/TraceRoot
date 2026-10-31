@@ -1,0 +1,49 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 4,
+    "unverifiable": 2,
+    "contradicted": 0
+  },
+  "total": 6,
+  "verified_fraction": 0.667,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 17 is record_hypothesis, which produces no evidence",
+      "ref": "H1 -> call 17"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 17 is record_hypothesis, which produces no evidence",
+      "ref": "H2 -> call 17"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 39 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 17"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/attr/_make.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

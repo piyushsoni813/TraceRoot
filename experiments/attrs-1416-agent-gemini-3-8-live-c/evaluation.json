@@ -1,0 +1,22 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "attrs-1416",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "no_submission",
+    "run_outcome": "budget_exhausted"
+  },
+  "root_cause": null,
+  "evidence": null,
+  "cost": {
+    "tool_calls": 40,
+    "model_calls": 40,
+    "total_tokens": 380940,
+    "seconds": 361.9,
+    "active_seconds": 61.3,
+    "waited_seconds": 300.5,
+    "models_used": {
+      "gemini-3.8-live": 40
+    }
+  }
+}

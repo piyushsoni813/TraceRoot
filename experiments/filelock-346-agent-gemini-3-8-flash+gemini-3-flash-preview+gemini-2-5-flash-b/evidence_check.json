@@ -1,0 +1,91 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 10,
+    "unverifiable": 3,
+    "contradicted": 0
+  },
+  "total": 13,
+  "verified_fraction": 0.769,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 14 is run_python with output",
+      "ref": "H1 -> call 14"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 14 is run_python with output",
+      "ref": "H2 -> call 14"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "call 19 ran before the last edit (call 26)",
+      "ref": "verification[0] -> call 14"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 27 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 19"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`BaseFileLock` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`inspect.signature(cls.__init__).parameters` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "3a79343 appears in a git output",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "3a79343711eef57b864670dc2cafd352ed749d9b appears in a git output",
+      "ref": "root_cause.breaking_commit"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/filelock/_api.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

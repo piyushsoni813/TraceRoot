@@ -1,0 +1,139 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 19,
+    "unverifiable": 2,
+    "contradicted": 0
+  },
+  "total": 21,
+  "verified_fraction": 0.905,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 29 is apply_edit, which produces no evidence",
+      "ref": "H1 -> call 29"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 30 is run_python with output",
+      "ref": "H1 -> call 30"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "unverifiable",
+      "detail": "call 29 is apply_edit, which produces no evidence",
+      "ref": "H2 -> call 29"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 30 is run_python with output",
+      "ref": "H2 -> call 30"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 30 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 30"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 33 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 30"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 34 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[2] -> call 33"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`MaybeStripAnsi` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`src/click/_termui_impl.py` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`io.TextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`echo_via_pager` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`MaybeStripAnsi` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_NamedTextIOWrapper` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_FixupStream` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`sys.stdout.flush()` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`CliRunner.invoke` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`CliRunner.invoke` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`CliRunner.invoke` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/click/_termui_impl.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

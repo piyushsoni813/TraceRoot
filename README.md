@@ -60,16 +60,35 @@ Notes:
 
 ## Investigator agent results (separate from the baseline tables above)
 
-Agent: `tools/agent/agent.py` with the tools, budgets and report checks described in `docs/investigator-design.md`
-(40 tool calls, 15 minutes, 200k context tokens). Driver model: Gemini 3.5 Flash on the free tier (20 requests per day,
-5 per minute). Quota errors named the model `gemini-3.6-flash` although `gemini-3.5-flash` was requested; this looks like an alias.
-One attempt per case. System prompt frozen on 2026-10-31 (commit d30bd84).
+Agent: `tools/agent/agent.py` (tools, hypotheses, budgets and report checks as in `docs/investigator-design.md`):
+40 tool calls, 15 minutes of active time (rate-limit waits excluded and recorded), 200k context tokens. All runs on the
+Gemini free tier, 2026-10-31. One model per driver, except the labelled Flash chain, which moves to the next model when one
+model's daily quota ends. "Success" is the same independent evaluator as the baseline: the submitted edits replayed on a
+fresh checkout, reproducer exits 0, held-out upstream tests pass. Root cause: `match` = breaking commit named; `likely` = same
+file and function as the real fix (a person should confirm the mechanism); `partial` = file or function only; `miss`.
+Evidence = items in the report backed by the transcript / all items checked (`tools/agent/evidence_check.py`, checker a7f25b9).
 
-| Case | Run outcome | Repair | Root cause | Evidence | Tool calls | Model requests |
+| Driver | filelock-346 | packaging-638 | attrs-1416 | click-3449 | flask-5160 | Solved |
 | --- | --- | --- | --- | --- | --- | --- |
-| filelock-346 | `api_error` (daily quota) | `no_submission` | n/a | n/a | 22 | 16 |
+| Gemini 3.1 Flash Live (preview) | **success**, root cause likely, evidence 14/16 | **success**, root cause partial, evidence 12/16 | no submit (40 calls used) | **success**, root cause partial, evidence 19/21 | **success**, root cause match, evidence 10/13 | 4/5 |
+| Gemini 3.5 Flash Lite | no submit (40 calls used) | **success**, root cause partial, evidence 7/11 | **success**, root cause likely, evidence 4/6 | no submit (40 calls used) | **success**, root cause miss, evidence 7/10 | 3/5 |
+| Gemini 3.1 Flash Lite | no submit (40 calls used) (b) | **success** (b), root cause partial, evidence 9/9 | stopped: HTTP 503 (busy) (b) | no submit (40 calls used) | **success**, root cause likely, evidence 19/20 | 2/5 |
+| Gemini 3.8 Live | no submit (40 calls used) (c) | **success** (c), root cause partial, evidence 11/11 | no submit (40 calls used) (c) | no submit (40 calls used) (c) | **success** (c), root cause match, evidence 8/10 | 2/5 |
+| Flash chain (3.8 Flash, 3 Flash, 2.5 Flash) | **success** (b), root cause likely, evidence 10/13 | **success** (b), root cause partial, evidence 17/17 | stopped: daily quota (b) | stopped: harness bug (signature) | stopped: harness bug (signature) | 2/5 |
 
-Notes:
-- filelock-346: the run stopped at 403 s with HTTP 429 (daily free-tier quota) after 22 tool calls. By then the agent had
-  recorded two hypotheses and was running diagnostics, but had made no edit. This measures the free-tier limit, not the agent's ability.
-  The run was not repeated. Retries are logged in `transcript.jsonl`: 5 times HTTP 503 and once HTTP 429 (per-minute limit).
+Cases solved by at least one driver: 5 of 5. Baseline for comparison (single prompt, edit format): Gemini 3.5 Flash 4 of 9 runs.
+
+Reruns and exclusions (every attempt is kept in `experiments/`; the table shows the last attempt, letter in brackets):
+- Gemini 3.8 Live `a` and `b` failed because of harness bugs in the Live client (an empty turn-closing message was read as an
+  empty answer, so the agent was nudged out after about 4 calls). Fixed in c21045a and f44b893, then `c` ran.
+- Gemini 3.1 Flash Lite `a` lost filelock, packaging and attrs to HTTP 503 (Google "high demand") before 503 patience was added;
+  `b` reran those three. attrs `b` again stopped on 503 after 12 retries.
+- Flash chain `a` lost every case to HTTP 503 or to a harness bug (missing thought signature after a model switch). `b` reran with
+  the fixes; it stopped at attrs when the last model's daily quota ended. click and flask wait for the next quota reset.
+- Gemini 3.8 Live Extended Thinking was dropped: it answered in speech and made no tool calls (all five `a` runs).
+- The very first run (filelock, Gemini 3.5 Flash) stopped on the 20 request daily quota after 22 calls, before any edit.
+
+Limits of these results:
+- Five public bugs, one counted attempt per cell. Indicative only; the models may have seen these fixes in training.
+- `likely` and `partial` root causes have not yet been reviewed by a person.
+- The free tier may use prompts to improve Google products; the cases are public repositories.

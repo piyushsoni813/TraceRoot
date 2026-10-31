@@ -1,0 +1,88 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "attrs-1416",
+  "model": "gemini-3.5-flash-lite",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "14 passed, 2 warnings in 0.04s"
+    ],
+    "applied_diff": "diff --git a/src/attr/_make.py b/src/attr/_make.py\nindex 7439dc2..41bc412 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -448,7 +448,7 @@ def _transform_attrs(\n     attrs = base_attrs + own_attrs\n \n     if field_transformer is not None:\n-        attrs = field_transformer(cls, attrs)\n+        attrs = list(field_transformer(cls, attrs))\n \n     # Check attr order after executing the field_transformer.\n     # Mandatory vs non-mandatory attr order only matters when they are part of\n"
+  },
+  "root_cause": {
+    "status": "likely",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/attr/_make.py"
+    ],
+    "claimed": {
+      "file": "src/attr/_make.py",
+      "function": "_transform_attrs",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 4,
+      "unverifiable": 2,
+      "contradicted": 0
+    },
+    "total": 6,
+    "verified_fraction": 0.667,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 17 is record_hypothesis, which produces no evidence",
+        "ref": "H1 -> call 17"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 17 is record_hypothesis, which produces no evidence",
+        "ref": "H2 -> call 17"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 39 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 17"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/attr/_make.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 40,
+    "model_calls": 40,
+    "total_tokens": 775442,
+    "seconds": 230.5,
+    "active_seconds": 88.3,
+    "waited_seconds": 142.3,
+    "models_used": {
+      "gemini-3.5-flash-lite": 40
+    }
+  }
+}

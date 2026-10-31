@@ -1,0 +1,60 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)\n",
+      "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "mechanism": "The _normalize function was unconditionally calling canonicalize_name on values when the key was 'extra'. When 'extra' was None, canonicalize_name raised a TypeError because it expects a string. The fix is to check if the value is None before calling canonicalize_name.",
+      "function": "_normalize",
+      "file": "src/packaging/markers.py"
+    },
+    "limitations": [
+      "None identified. The fix is simple and verified by the reproduction script and existing tests."
+    ],
+    "verification": [
+      {
+        "command": "python reproduction script",
+        "call": 11,
+        "result": "Result: False"
+      },
+      {
+        "command": "pytest tests/test_markers.py",
+        "result": "2221 passed in 4.26s",
+        "call": 14
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The _normalize function blindly calls canonicalize_name on values when key is 'extra', but it doesn't check if the value is None. If it's None, it should probably be treated as not matching or handled gracefully.",
+      "predicts": "If I change _normalize to handle None by returning it as is (or converting to empty string), the TypeError will be gone and it will return False.",
+      "status": "supported",
+      "evidence": "The code fails when 'extra' is None, but works when it is a string. The failure is in _normalize which calls canonicalize_name on the value. If the value is None, it should probably not be canonicalized, or it should be handled. If I change _normalize to handle None, it should fix the issue.",
+      "calls": [
+        1,
+        6,
+        7
+      ],
+      "recorded_at_call": 3,
+      "updated_at_call": 8
+    },
+    {
+      "id": "H2",
+      "text": "The environment dictionary contains None values which are not expected by the marker evaluation logic. Filtering them out might be the correct approach.",
+      "predicts": "If I change _evaluate_markers to filter out None values from the environment before passing them to _normalize, it might fix the issue.",
+      "status": "rejected",
+      "evidence": "Filtering out None from the environment in _evaluate_markers might be tricky because the environment is used for other markers too. If I filter it out, I might break other things. H1 seems more direct.",
+      "calls": [
+        5
+      ],
+      "recorded_at_call": 4,
+      "updated_at_call": 9
+    }
+  ],
+  "decision": "ready for human review"
+}

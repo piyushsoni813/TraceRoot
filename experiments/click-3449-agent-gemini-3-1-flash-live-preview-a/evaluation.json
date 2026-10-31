@@ -1,0 +1,178 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "click-3449",
+  "model": "gemini-3.1-flash-live-preview",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "259 passed, 21 skipped in 0.65s"
+    ],
+    "applied_diff": "diff --git a/src/click/_termui_impl.py b/src/click/_termui_impl.py\nindex 1d23026..075952c 100644\n--- a/src/click/_termui_impl.py\n+++ b/src/click/_termui_impl.py\n@@ -390,6 +390,9 @@ class MaybeStripAnsi(io.TextIOWrapper):\n         super().__init__(stream, **kwargs)\n         self.color = color\n \n+    def close(self) -> None:\n+        self.detach()\n+\n     def write(self, text: str) -> int:\n         if not self.color:\n             text = strip_ansi(text)\n"
+  },
+  "root_cause": {
+    "status": "partial",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": false,
+    "fix_files": [
+      "src/click/_termui_impl.py"
+    ],
+    "claimed": {
+      "file": "src/click/_termui_impl.py",
+      "function": "MaybeStripAnsi",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 19,
+      "unverifiable": 2,
+      "contradicted": 0
+    },
+    "total": 21,
+    "verified_fraction": 0.905,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 29 is apply_edit, which produces no evidence",
+        "ref": "H1 -> call 29"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 30 is run_python with output",
+        "ref": "H1 -> call 30"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "unverifiable",
+        "detail": "call 29 is apply_edit, which produces no evidence",
+        "ref": "H2 -> call 29"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 30 is run_python with output",
+        "ref": "H2 -> call 30"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 30 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 30"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 33 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 30"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 34 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[2] -> call 33"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`MaybeStripAnsi` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`src/click/_termui_impl.py` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`io.TextIOWrapper` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`echo_via_pager` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`MaybeStripAnsi` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_NamedTextIOWrapper` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_FixupStream` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`sys.stdout.flush()` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`CliRunner.invoke` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`CliRunner.invoke` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`CliRunner.invoke` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/click/_termui_impl.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 35,
+    "model_calls": 32,
+    "total_tokens": 0,
+    "seconds": 40.7,
+    "active_seconds": 40.7,
+    "waited_seconds": 0.0,
+    "models_used": {
+      "gemini-3.1-flash-live-preview": 32
+    }
+  }
+}

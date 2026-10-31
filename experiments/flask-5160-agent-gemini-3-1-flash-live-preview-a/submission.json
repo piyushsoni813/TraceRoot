@@ -1,0 +1,67 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/helpers.py",
+      "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except ValueError:\n        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    },
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except ValueError:\n        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    }
+  ],
+  "report": {
+    "limitations": [],
+    "root_cause": {
+      "function": "get_root_path, _find_package_path",
+      "mechanism": "The commit replaced `pkgutil.get_loader(import_name)` with `importlib.util.find_spec(import_name)`. In Python 3.11+, `find_spec` raises `ValueError` if `import_name` is `\"__main__\"` and `sys.modules[\"__main__\"].__spec__` is `None`, which is the case when running a script directly. Previously `pkgutil.get_loader` returned `None` in this case, which Flask handled correctly.",
+      "file": "src/flask/helpers.py, src/flask/scaffold.py",
+      "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+    },
+    "verification": [
+      {
+        "result": "ValueError: __main__.__spec__ is None",
+        "call": 4,
+        "command": "run_python reproduction script"
+      },
+      {
+        "command": "run_python reproduction script after fix",
+        "call": 17,
+        "result": "Flask app created successfully"
+      },
+      {
+        "command": "run_tests tests/test_basic.py tests/test_helpers.py tests/test_instance_config.py",
+        "call": 19,
+        "result": "168 passed"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The recent change replacing pkgutil.get_loader with importlib.util.find_spec broke Flask for scripts run directly, because find_spec raises ValueError when __main__.__spec__ is None, which is common in direct script execution.",
+      "predicts": "Running the reproduction script will fail with ValueError: __main__.__spec__ is None.",
+      "status": "supported",
+      "evidence": "The reproduction script failed with the predicted ValueError.",
+      "calls": [
+        4
+      ],
+      "recorded_at_call": 9,
+      "updated_at_call": 11
+    },
+    {
+      "id": "H2",
+      "text": "The issue is environment-specific and not reproducible in this sandbox.",
+      "predicts": "Running the reproduction script will succeed.",
+      "status": "rejected",
+      "evidence": "The reproduction script failed, so it is reproducible.",
+      "calls": [
+        4
+      ],
+      "recorded_at_call": 10,
+      "updated_at_call": 12
+    }
+  ],
+  "decision": "ready for human review"
+}

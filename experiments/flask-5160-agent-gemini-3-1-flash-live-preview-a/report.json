@@ -1,0 +1,102 @@
+{
+  "case_id": "flask-5160",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 20,
+    "seconds": 36.0,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "function": "get_root_path, _find_package_path",
+    "mechanism": "The commit replaced `pkgutil.get_loader(import_name)` with `importlib.util.find_spec(import_name)`. In Python 3.11+, `find_spec` raises `ValueError` if `import_name` is `\"__main__\"` and `sys.modules[\"__main__\"].__spec__` is `None`, which is the case when running a script directly. Previously `pkgutil.get_loader` returned `None` in this case, which Flask handled correctly.",
+    "file": "src/flask/helpers.py, src/flask/scaffold.py",
+    "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The recent change replacing pkgutil.get_loader with importlib.util.find_spec broke Flask for scripts run directly, because find_spec raises ValueError when __main__.__spec__ is None, which is common in direct script execution.",
+      "predicts": "Running the reproduction script will fail with ValueError: __main__.__spec__ is None.",
+      "status": "supported",
+      "evidence": "The reproduction script failed with the predicted ValueError.",
+      "calls": [
+        4
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The issue is environment-specific and not reproducible in this sandbox.",
+      "predicts": "Running the reproduction script will succeed.",
+      "status": "rejected",
+      "evidence": "The reproduction script failed, so it is reproducible.",
+      "calls": [
+        4
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 4,
+      "tool": "run_python",
+      "args": {
+        "code": "from flask import Flask\ntry:\n    app = Flask(__name__)\n    print(\"Flask app created successfully\")\nexcept Exception as e:\n    print(f\"Caught exception: {e}\")\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nCaught exception: __main__.__spec__ is None\nTraceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n    app = Flask(__name__)\n  File \"/work/src/flask/app.py\", line 367, in __init__\n    super().__init__(\n    ~~~~~~~~~~~~~~~~^\n        import_name=import_name,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n        root_path=root_path,\n        ^^^^^^^^^^^^^^^^^^^^\n    "
+    },
+    {
+      "call": 17,
+      "tool": "run_python",
+      "args": {
+        "code": "from flask import Flask\ntry:\n    app = Flask(__name__)\n    print(\"Flask app created successfully\")\nexcept Exception as e:\n    print(f\"Caught exception: {e}\")\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nFlask app created successfully\n"
+    },
+    {
+      "call": 19,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_basic.py",
+          "tests/test_helpers.py",
+          "tests/test_instance_config.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [ 42%]\n........................................................................ [ 85%]\n........................                                                 [100%]\n168 passed in 3.19s\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/flask/helpers.py",
+        "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except ValueError:\n        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+      },
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except ValueError:\n        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+      }
+    ],
+    "diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 4e8bc8b8..47de4d4e 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -575,7 +575,12 @@ def get_root_path(import_name: str) -> str:\n         return os.path.dirname(os.path.abspath(mod.__file__))\n \n     # Next attempt: check the loader.\n-    spec = importlib.util.find_spec(import_name)\n+    try:\n+        spec = importlib.util.find_spec(import_name)\n+    except ValueError:\n+        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     # Loader does not exist or we're referring to an unloaded main\ndiff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..60c3351f 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,12 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except ValueError:\n+        # Python 3.11+ raises ValueError if __main__.__spec__ is None.\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "verification": [
+    {
+      "result": "ValueError: __main__.__spec__ is None",
+      "call": 4,
+      "command": "run_python reproduction script"
+    },
+    {
+      "command": "run_python reproduction script after fix",
+      "call": 17,
+      "result": "Flask app created successfully"
+    },
+    {
+      "command": "run_tests tests/test_basic.py tests/test_helpers.py tests/test_instance_config.py",
+      "call": 19,
+      "result": "168 passed"
+    }
+  ],
+  "limitations": [],
+  "decision": "ready for human review"
+}

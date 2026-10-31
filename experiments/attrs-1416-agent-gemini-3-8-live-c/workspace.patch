@@ -1,0 +1,14 @@
+diff --git a/src/attr/_make.py b/src/attr/_make.py
+index 7439dc2..4d96182 100644
+--- a/src/attr/_make.py
++++ b/src/attr/_make.py
+@@ -450,6 +450,9 @@ def _transform_attrs(
+     if field_transformer is not None:
+         attrs = field_transformer(cls, attrs)
+ 
++    if not isinstance(attrs, list):
++        attrs = list(attrs)
++
+     # Check attr order after executing the field_transformer.
+     # Mandatory vs non-mandatory attr order only matters when they are part of
+     # the __init__ signature and when they aren't kw_only (which are moved to

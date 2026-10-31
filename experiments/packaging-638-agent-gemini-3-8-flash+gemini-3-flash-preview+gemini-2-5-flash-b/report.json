@@ -1,0 +1,107 @@
+{
+  "case_id": "packaging-638",
+  "model": "gemini-3.8-flash,gemini-3-flash-preview,gemini-2.5-flash",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 17,
+    "seconds": 96.0,
+    "total_tokens": 53302
+  },
+  "root_cause": {
+    "function": "_normalize",
+    "breaking_commit": "1aa82a856a1d6fbc7b111b4896a2fd28c7cdccc5",
+    "file": "src/packaging/markers.py",
+    "mechanism": "The `_normalize` function, introduced in commit 53dbb257, calls `canonicalize_name` on values when the key is \"extra\". Commit 1aa82a85 removed the `_get_env` function, which previously handled `None` values by raising an `UndefinedEnvironmentName` exception. This change allowed `None` to be passed directly to `_normalize` for the \"extra\" key, which then passed `None` to `canonicalize_name`. `canonicalize_name` expects a string or bytes-like object, but received `NoneType`, leading to a TypeError."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The _normalize function was recently changed to call canonicalize_name without checking for None values.",
+      "predicts": "git_blame on src/packaging/markers.py lines 118-127 will show a recent commit that introduced the call to canonicalize_name or removed a None check.",
+      "status": "supported",
+      "evidence": "git_blame (call 7) shows commit 53dbb257 introduced _normalize and the call to canonicalize_name. git_show (call 9) confirms that _normalize does not check for None.",
+      "calls": [
+        7,
+        9
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The _evaluate_markers function was recently changed to pass None to _normalize for the \"extra\" key.",
+      "predicts": "git_blame on src/packaging/markers.py lines 143-150 will show a recent commit that changed how lhs_value or rhs_value are assigned, allowing None for \"extra\".",
+      "status": "supported",
+      "evidence": "git_blame (call 8) shows commit 1aa82a85 changed how environment variables are accessed. git_show (call 10) confirms that _get_env was removed, allowing None to be passed directly to _normalize.",
+      "calls": [
+        8,
+        10
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 7,
+      "tool": "git_blame",
+      "args": {
+        "end": 127,
+        "path": "src/packaging/markers.py",
+        "start": 118
+      },
+      "excerpt": "53dbb257 packaging/markers.py (Miro Hron\u010dok    2022-05-12 08:34:23 +0200 118) def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n53dbb257 packaging/markers.py (Miro Hron\u010dok    2022-05-12 08:34:23 +0200 119)     # PEP 685 \u2013 Comparison of extra names for optional distribution dependencies\n53dbb257 packaging/markers.py (Miro Hron\u010dok    2022-05-12 08:34:23 +0200 120)     # https://peps.python."
+    },
+    {
+      "call": 8,
+      "tool": "git_blame",
+      "args": {
+        "end": 150,
+        "path": "src/packaging/markers.py",
+        "start": 143
+      },
+      "excerpt": "1aa82a85 packaging/markers.py (Blazej Michalik 2022-06-02 17:04:32 +0200 143)                 lhs_value = environment[environment_key]\n6b67f7fd packaging/markers.py (Donald Stufft   2016-01-19 09:42:16 -0500 144)                 rhs_value = rhs.value\n821690a7 packaging/markers.py (Donald Stufft   2015-11-09 21:55:38 -0500 145)             else:\n6b67f7fd packaging/markers.py (Donald Stufft   2016-0"
+    },
+    {
+      "call": 9,
+      "tool": "git_show",
+      "args": {
+        "rev": "53dbb257"
+      },
+      "excerpt": "53dbb257e5fef150d32ef85c7427133d71651989\nMiro Hron\u010dok 2022-05-12\n\nAdhere to PEP 685 when evaluating markers with extras (#545)\n\nPEP: https://peps.python.org/pep-0685/\nOriginal problem: https://discuss.python.org/t/7614\n\ndiff --git a/packaging/markers.py b/packaging/markers.py\nindex 3990514..03d8cde 100644\n--- a/packaging/markers.py\n+++ b/packaging/markers.py\n@@ -21,6 +21,7 @@ from pyparsing import"
+    },
+    {
+      "call": 10,
+      "tool": "git_show",
+      "args": {
+        "rev": "1aa82a85"
+      },
+      "excerpt": "1aa82a856a1d6fbc7b111b4896a2fd28c7cdccc5\nBlazej Michalik 2022-06-02\n\nEvaluate markers under environment with empty \"extra\" (#550)\n\nCo-authored-by: Pradyun Gedam <pradyunsg@gmail.com>\n\ndiff --git a/CHANGELOG.rst b/CHANGELOG.rst\nindex 214326e..23b85d1 100644\n--- a/CHANGELOG.rst\n+++ b/CHANGELOG.rst\n@@ -4,7 +4,9 @@ Changelog\n *unreleased*\n ~~~~~~~~~~~~\n \n-No unreleased changes.\n+* ``Marker.evaluate`` "
+    },
+    {
+      "call": 16,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_markers.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [  3%]\n........................................................................ [  6%]\n........................................................................ [  9%]\n........................................................................ [ 12%]\n......................................................................."
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/packaging/markers.py",
+        "search": "        return tuple(canonicalize_name(v) for v in values)",
+        "replace": "        return tuple(canonicalize_name(v) if v is not None else \"\" for v in values)"
+      }
+    ],
+    "diff": "diff --git a/src/packaging/markers.py b/src/packaging/markers.py\nindex a5bf35c..fa2454e 100644\n--- a/src/packaging/markers.py\n+++ b/src/packaging/markers.py\n@@ -121,7 +121,7 @@ def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n     # > When comparing extra names, tools MUST normalize the names being\n     # > compared using the semantics outlined in PEP 503 for names\n     if key == \"extra\":\n-        return tuple(canonicalize_name(v) for v in values)\n+        return tuple(canonicalize_name(v) if v is not None else \"\" for v in values)\n \n     # other environment markers don't have such standards\n     return values\n"
+  },
+  "verification": [
+    {
+      "result": "2221 passed in 3.99s",
+      "call": 16,
+      "command": "run_tests(selection = [\"tests/test_markers.py\"])"
+    }
+  ],
+  "limitations": [],
+  "decision": "ready for human review"
+}

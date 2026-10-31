@@ -1,0 +1,79 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": true,
+  "counts": {
+    "verified": 11,
+    "unverifiable": 0,
+    "contradicted": 0
+  },
+  "total": 11,
+  "verified_fraction": 1.0,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H1 -> call 11"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H2 -> call 11"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 11 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 11"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 16 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 11"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`key == \"extra\"` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/packaging/markers.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

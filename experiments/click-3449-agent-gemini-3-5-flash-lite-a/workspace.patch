@@ -1,0 +1,20 @@
+diff --git a/src/click/_termui_impl.py b/src/click/_termui_impl.py
+index 1d23026..774d6bb 100644
+--- a/src/click/_termui_impl.py
++++ b/src/click/_termui_impl.py
+@@ -439,12 +439,14 @@ def get_pager_file(color: bool | None = None) -> t.Generator[t.TextIO, None, Non
+         # Split streams by capabilities rather than the abstract TextIO /
+         # BinaryIO annotations: buffered text streams can be unwrapped to bytes,
+         # while text-only streams are yielded as-is.
+-        if _has_binary_buffer(stream):
++        if _has_binary_buffer(stream) and stream is not _default_text_stdout():
+             # Text stream backed by a binary buffer.
+             stream = MaybeStripAnsi(stream.buffer, color=color, encoding=encoding)
+         elif isinstance(stream, t.BinaryIO):
+             # Binary stream
+             stream = MaybeStripAnsi(stream, color=color, encoding=encoding)
++        elif not hasattr(stream, "color"):
++            stream.color = color  # type: ignore[attr-defined]
+         try:
+             yield stream
+         finally:

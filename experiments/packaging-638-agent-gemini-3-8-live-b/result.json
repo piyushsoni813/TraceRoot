@@ -1,0 +1,13 @@
+{
+  "outcome": "no_submission",
+  "tool_calls": 4,
+  "model_calls": 8,
+  "seconds": 27.9,
+  "active_seconds": 17.3,
+  "waited_seconds": 10.6,
+  "models_used": {
+    "gemini-3.8-live": 8
+  },
+  "total_tokens": 12534,
+  "last_context_tokens": 3808
+}

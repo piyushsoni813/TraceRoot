@@ -1,0 +1,173 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "flask-5160",
+  "model": "gemini-3.1-flash-lite",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "41 passed in 0.41s"
+    ],
+    "applied_diff": "diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..cd4a7882 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,10 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except ValueError:\n+        spec = None\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "root_cause": {
+    "status": "likely",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/flask/helpers.py",
+      "src/flask/scaffold.py"
+    ],
+    "claimed": {
+      "file": "src/flask/scaffold.py",
+      "function": "_find_package_path",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 19,
+      "unverifiable": 1,
+      "contradicted": 0
+    },
+    "total": 20,
+    "verified_fraction": 0.95,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 14 is run_python with output",
+        "ref": "H1 -> call 14"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 14 is run_python with output",
+        "ref": "H2 -> call 14"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 19 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 14"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 22 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 19"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 23 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[2] -> call 22"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_find_package_path` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`__main__.__spec__` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec` appears in the transcript",
+        "ref": "H1.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec` appears in the transcript",
+        "ref": "H2.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec(\"__main__\")` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`__main__.__spec__` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`try...except` appears nowhere in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`_find_package_path` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`root_mod_name` appears in the transcript",
+        "ref": "H2.text"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/flask/scaffold.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 24,
+    "model_calls": 24,
+    "total_tokens": 116144,
+    "seconds": 121.3,
+    "active_seconds": 68.8,
+    "waited_seconds": 52.5,
+    "models_used": {
+      "gemini-3.1-flash-lite": 24
+    }
+  }
+}

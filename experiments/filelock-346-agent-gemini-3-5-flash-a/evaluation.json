@@ -12,6 +12,9 @@
     "tool_calls": 22,
     "model_calls": 16,
     "total_tokens": 341369,
-    "seconds": 403.3
+    "seconds": 403.3,
+    "active_seconds": null,
+    "waited_seconds": null,
+    "models_used": null
   }
 }
