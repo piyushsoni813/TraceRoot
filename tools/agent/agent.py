@@ -11,7 +11,7 @@ Writes to <run_dir>: transcript.jsonl (every model response and tool result, une
 run.json (frozen configuration and hashes), submission.json (if the agent submitted) and
 result.json (outcome and cost). The API key is read from GEMINI_API_KEY and never logged.
 """
-import hashlib, json, os, sys, time, urllib.error, urllib.request, uuid
+import hashlib, json, os, subprocess, sys, time, urllib.error, urllib.request, uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sandbox import Sandbox, ROOT
@@ -24,6 +24,7 @@ MAX_SECONDS = 15 * 60
 MAX_CONTEXT_TOKENS = 200_000
 MAX_NUDGES = 3
 MAX_API_ATTEMPTS = 7
+MAX_BUSY_ATTEMPTS = 12  # HTTP 503 'high demand': back off up to about 12 minutes, outside the agent's time
 RETRY_CODES = {429, 500, 502, 503, 504}
 GEN_CONFIG = {"temperature": 0, "topP": 1, "topK": 1, "maxOutputTokens": 16384}
 
@@ -56,6 +57,10 @@ class DailyQuotaError(ApiError):
     pass
 
 
+class ModelBusyError(ApiError):
+    pass
+
+
 # free-tier requests per minute (from https://ai.dev/rate-limit on 2026-10-31)
 RPM = {"gemini-3.5-flash": 5, "gemini-3.6-flash": 5, "gemini-3.8-flash": 5, "gemini-3-flash-preview": 5,
        "gemini-2.5-flash": 5, "gemini-2.5-flash-lite": 10, "gemini-3.5-flash-lite": 15, "gemini-3.1-flash-lite": 15}
@@ -64,12 +69,19 @@ TPM = 250_000  # free-tier input tokens per minute, same for every text model li
 MAX_WALL_SECONDS = 60 * 60
 
 
+DUMMY_SIGNATURE = "skip_thought_signature_validator"  # accepted by Gemini 3 for calls written by another model
+
+
 def strip_signatures(contents):
-    """Thought signatures belong to the model that wrote them; drop them when another model takes over."""
+    """Thought signatures belong to the model that wrote them. When another model takes over, function
+    calls get the documented dummy signature (Gemini 3 rejects calls without one) and others lose theirs."""
     out = json.loads(json.dumps(contents))
     for c in out:
         for p in c.get("parts", []):
-            p.pop("thoughtSignature", None)
+            if "functionCall" in p:
+                p["thoughtSignature"] = DUMMY_SIGNATURE
+            else:
+                p.pop("thoughtSignature", None)
     return out
 
 
@@ -111,10 +123,11 @@ class GeminiClient:
                 resp, attempt = self._request(model, system, strip_signatures(contents) if self.strip else contents)
                 self.last_model = model
                 return resp, attempt
-            except DailyQuotaError:
+            except (DailyQuotaError, ModelBusyError) as e:
                 if self.idx + 1 >= len(self.models):
                     raise
-                self.log("model_switch", from_model=model, to_model=self.models[self.idx + 1], reason="daily quota")
+                why = "daily quota" if isinstance(e, DailyQuotaError) else "busy (HTTP 503 after all retries)"
+                self.log("model_switch", from_model=model, to_model=self.models[self.idx + 1], reason=why)
                 self.idx += 1
                 self.strip = True
 
@@ -127,7 +140,9 @@ class GeminiClient:
             "generationConfig": GEN_CONFIG,
         }).encode()
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-        for attempt in range(1, MAX_API_ATTEMPTS + 1):
+        attempt, busy = 0, 0
+        while True:
+            attempt += 1
             self._pace(model)
             req = urllib.request.Request(url, body, {"Content-Type": "application/json", "x-goog-api-key": self.key})
             try:
@@ -139,6 +154,13 @@ class GeminiClient:
                 detail = e.read().decode("utf-8", "replace")[:500]
                 if e.code == 429 and "per day" in detail:  # a daily quota will not clear by waiting
                     raise DailyQuotaError(f"HTTP 429 (daily quota, {model}): {detail}")
+                if e.code == 503:
+                    busy += 1
+                    if busy >= MAX_BUSY_ATTEMPTS:
+                        raise ModelBusyError(f"HTTP 503 ({model}) {busy} times: {detail}")
+                    self.log("api_retry", attempt=attempt, status=e.code, model=model, detail=detail)
+                    self._sleep(min(120, 2 ** busy))
+                    continue
                 if e.code in RETRY_CODES and attempt < MAX_API_ATTEMPTS:
                     self.log("api_retry", attempt=attempt, status=e.code, model=model, detail=detail)
                     self._sleep(min(60, 2 ** attempt))
@@ -245,6 +267,7 @@ class LiveClient:
         self.ws, self.handle, self.reopen = None, None, False
         self.consumed, self.waited = 0, 0.0
         self._last_send, self._last_tokens = None, 0
+        self._pending = []  # messages read early, handled first by the next _read
         self.system = ""
 
     def _socket(self):
@@ -275,10 +298,26 @@ class LiveClient:
         self.ws.send(json.dumps(msg))
         self._last_send = time.time()
 
+    def _next(self, timeout):
+        return self._pending.pop(0) if self._pending else json.loads(self.ws.recv(timeout=timeout))
+
+    def _drain_turn_end(self, usage):
+        """Some Live models close the tool-call turn with a separate, empty turnComplete. Read it now so the
+        next turn does not mistake it for an empty answer; anything else is kept for the next turn."""
+        try:
+            m = json.loads(self.ws.recv(timeout=1.0))
+        except TimeoutError:
+            return usage
+        sc = m.get("serverContent") or {}
+        if sc.get("turnComplete") and not sc.get("modelTurn") and not sc.get("outputTranscription") and set(m) <= {"serverContent", "usageMetadata"}:
+            return m.get("usageMetadata") or usage
+        self._pending.append(m)
+        return usage
+
     def _read(self):
         texts, calls, usage = [], [], {}
         while True:
-            m = json.loads(self.ws.recv(timeout=300))
+            m = self._next(300)
             upd = m.get("sessionResumptionUpdate") or {}
             if upd.get("resumable") and upd.get("newHandle"):
                 self.handle = upd["newHandle"]
@@ -288,6 +327,7 @@ class LiveClient:
                 usage = m["usageMetadata"]
             if "toolCall" in m:
                 calls = m["toolCall"].get("functionCalls", [])
+                usage = self._drain_turn_end(usage)
                 break
             sc = m.get("serverContent") or {}
             if (sc.get("outputTranscription") or {}).get("text"):
@@ -348,6 +388,14 @@ def make_client(model, log):
     return GeminiClient(model, log)
 
 
+def code_commit():
+    """The git commit of the harness, with '+dirty' if tools/agent has uncommitted changes."""
+    head = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    dirty = subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--", "tools/agent", "tools/sandbox"],
+                           capture_output=True, text=True).stdout.strip()
+    return head + ("+dirty" if dirty else "")
+
+
 def sha(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -369,7 +417,7 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
            "user_prompt_sha256": sha(user_text), "gen_config": GEN_CONFIG,
            "limits": {"tool_calls": max_calls, "active_seconds": max_seconds, "wall_seconds": MAX_WALL_SECONDS,
                       "context_tokens": MAX_CONTEXT_TOKENS, "note": "time spent waiting on rate limits is excluded from active_seconds"},
-           "sandbox_image": "traceroot-sandbox:1"}
+           "sandbox_image": "traceroot-sandbox:1", "code_commit": code_commit()}
     json.dump(cfg, open(f"{run_dir}/run.json", "w"), indent=2)
     log("run_start", config=cfg, system_prompt=SYSTEM_PROMPT, user_prompt=user_text)
 

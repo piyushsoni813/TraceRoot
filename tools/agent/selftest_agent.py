@@ -84,7 +84,7 @@ check("thought signature echoed back", any("SIG-1" in json.dumps(c) for c in hap
 check("tool results carry budget notice", "tool call 1 of 40 used" in json.dumps(happy.sent[1]))
 check("transcript events", [e["event"] for e in ev][0] == "run_start" and ev[-1]["event"] == "run_end" and sum(e["event"] == "tool_call" for e in ev) == 8)
 check("tool_call numbers are 1..8", [e["n"] for e in ev if e["event"] == "tool_call"] == list(range(1, 9)))
-check("run.json has hashes", set(json.load(open(f"{d}/run.json"))) >= {"tools_hash", "system_prompt_sha256", "user_prompt_sha256", "limits"})
+check("run.json has hashes and the code commit", set(json.load(open(f"{d}/run.json"))) >= {"tools_hash", "system_prompt_sha256", "user_prompt_sha256", "limits", "code_commit"})
 check("refuses to overwrite a run", subprocess.run([sys.executable, "-I", f"{ROOT}/tools/agent/agent.py", CASE, d], capture_output=True).returncode != 0)
 
 # 1b. the report for the happy run is built, valid and readable
@@ -160,7 +160,8 @@ try:
     real.generate("sys", [])
     check("gives up after max attempts", False)
 except agent.ApiError as e:
-    check("gives up after max attempts", "503" in str(e) and len([1 for e, _ in logged if e == "api_retry"]) == 2 + agent.MAX_API_ATTEMPTS - 1)
+    check("gives up after max attempts", "503" in str(e) and isinstance(e, agent.ModelBusyError)
+          and len([1 for e, _ in logged if e == "api_retry"]) == 2 + agent.MAX_BUSY_ATTEMPTS - 1)
 def bad_request(req, timeout=0):
     raise urllib.error.HTTPError(req.full_url, 400, "bad", {}, io.BytesIO(b'{"error":"bad schema"}'))
 agent.urllib.request.urlopen = bad_request
@@ -244,6 +245,7 @@ r, _ = chain.generate("sys", signed)
 check("daily quota on the first model moves on to the second", seen_urls == ["model-a", "model-b"] and chain.last_model == "model-b", seen_urls)
 check("the switch is logged with both model names", [(k["from_model"], k["to_model"]) for e, k in chain_log if e == "model_switch"] == [("model-a", "model-b")])
 check("thought signatures are not sent to the next model", "SIG-A" in seen_bodies[0] and "SIG-A" not in seen_bodies[1])
+check("calls from the old model carry the dummy signature", agent.DUMMY_SIGNATURE in seen_bodies[1])
 check("the caller's history keeps its signatures", signed[1]["parts"][0]["thoughtSignature"] == "SIG-A")
 chain.generate("sys", signed)
 check("later requests stay on the new model", seen_urls[-1] == "model-b" and "model-a" not in seen_urls[2:])
@@ -260,6 +262,24 @@ fast._last_tokens["gemini-3.5-flash-lite"] = 125_000
 clock.slept.clear(); fast.generate("sys", signed)
 check("a large prompt is paced by tokens per minute", clock.slept and 29.5 <= sum(clock.slept) <= 31.0, clock.slept)
 check("prompt size is read from each response", fast._last_tokens["gemini-3.5-flash-lite"] == 1000)
+# a model that stays busy (503) hands over to the next one in a chain; alone it raises after MAX_BUSY_ATTEMPTS
+busy_urls = []
+def busy_open(req, timeout=0):
+    busy_urls.append(req.full_url.split("/models/")[1].split(":")[0])
+    if busy_urls[-1] == "busy-a":
+        raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, io.BytesIO(b'{"error":{"message":"high demand"}}'))
+    return Resp(json.dumps(response([fc("list_dir")])).encode())
+agent.urllib.request.urlopen = busy_open
+busy_log = []
+bc = agent.GeminiClient("busy-a,ok-b", lambda e, **kw: busy_log.append((e, kw)))
+bc.generate("sys", signed)
+check("a busy model is retried MAX_BUSY_ATTEMPTS times", busy_urls.count("busy-a") == agent.MAX_BUSY_ATTEMPTS, busy_urls.count("busy-a"))
+check("then the chain moves on and logs why", bc.last_model == "ok-b" and any(k.get("reason", "").startswith("busy") for e, k in busy_log if e == "model_switch"))
+try:
+    agent.GeminiClient("busy-a", lambda e, **kw: None).generate("sys", signed)
+    check("a busy single model raises ModelBusyError", False)
+except agent.ModelBusyError:
+    check("a busy single model raises ModelBusyError", True)
 # every model out of quota raises
 agent.urllib.request.urlopen = lambda req, timeout=0: (_ for _ in ()).throw(urllib.error.HTTPError(req.full_url, 429, "q", {}, io.BytesIO(b'{"error":{"message":"requests per day limit exceeded"}}')))
 allout = agent.GeminiClient("m1,m2", lambda e, **kw: None)
@@ -345,6 +365,19 @@ try:
     check("socket errors become ApiError", False)
 except agent.ApiError as e:
     check("socket errors become ApiError", "TimeoutError" in str(e))
+# a separate empty turnComplete right after a tool call is not mistaken for an empty answer
+ws3 = FakeWS([{"setupComplete": {}},
+              {"toolCall": {"functionCalls": [{"id": "k1", "name": "list_dir", "args": {}}]}},
+              {"serverContent": {"turnComplete": True}, "usageMetadata": {"promptTokenCount": 2600, "totalTokenCount": 2700}},
+              {"toolCall": {"functionCalls": [{"id": "k2", "name": "read_file", "args": {"path": "src/a.py"}}]}}])
+agent.LiveClient.connect = lambda: ws3
+lv3 = agent.LiveClient("gemini-3.8-live", lambda e, **kw: None)
+h3 = [{"role": "user", "parts": [{"text": "bug"}]}]
+q1, _ = lv3.generate("SYS", h3)
+check("usage that arrives with the closing turnComplete is kept", q1["usageMetadata"]["promptTokenCount"] == 2600)
+h3 += [q1["candidates"][0]["content"], {"role": "user", "parts": [{"functionResponse": {"id": "k1", "name": "list_dir", "response": {"result": "a"}}}]}]
+q2, _ = lv3.generate("SYS", h3)
+check("the next turn returns the real tool call, not an empty answer", q2["candidates"][0]["content"]["parts"][0]["functionCall"]["id"] == "k2", q2)
 agent.LiveClient.connect = lambda: FakeWS([{"error": "bad model"}])
 try:
     agent.LiveClient("gemini-x-live", lambda e, **kw: None).generate("SYS", [{"role": "user", "parts": [{"text": "x"}]}])
