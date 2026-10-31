@@ -108,6 +108,26 @@ check("rejects empty patch", any("patch" in e for e in bad(lambda r: r["patch"].
 check("rejects extra top-level field", any("not allowed" in e for e in bad(lambda r: r.update(extra=1))))
 check("rejects bool as integer", any("expected integer" in e for e in bad(lambda r: r["verification"][0].update(call=True))))
 
+# 1c. protocol v2 guidance
+check("run.json records the protocol", json.load(open(f"{d_happy}/run.json"))["protocol"] == agent.PROTOCOL)
+check("an on-track run gets no guidance", not any(e["event"] == "guidance" for e in [json.loads(l) for l in open(f"{d_happy}/transcript.jsonl", encoding="utf-8")]))
+explore = Scripted([response([fc("list_dir", path=".")])] * 30)
+d, res, ev = go("v2-checkpoints", explore, max_calls=26)
+g = [(e["kind"], e["at_call"]) for e in ev if e["event"] == "guidance"]
+check("hypothesis checkpoint fires once at call 15 and repair at call 25", g == [("hypothesis", 15), ("repair", 25)], g)
+check("the guidance reaches the model inside the tool result", "no hypothesis recorded yet" in json.dumps(explore.sent[15]))
+edit = lambda i: fc("apply_edit", path="src/click/__init__.py", search=UNIQ + (f"  # e{i - 1}" if i > 1 else ""), replace=UNIQ + f"  # e{i}")
+fail = fc("run_tests", selection=["tests/does_not_exist.py"])
+thrash = Scripted([r for i in range(1, 5) for r in (response([edit(i)]), response([fail]))])
+d, res, ev = go("v2-thrash", thrash, max_calls=8)
+g = [(e["kind"], e["at_call"]) for e in ev if e["event"] == "guidance"]
+check("thrash guard fires after three failing edit/test cycles", g == [("thrash", 6)], g)
+old_protocol = agent.PROTOCOL
+agent.PROTOCOL = "v1"
+d, res, ev = go("v1-none", Scripted([response([fc("list_dir", path=".")])] * 30), max_calls=26)
+check("protocol v1 gives no guidance", not any(e["event"] == "guidance" for e in ev) and json.load(open(f"{d}/run.json"))["protocol"] == "v1")
+agent.PROTOCOL = old_protocol
+
 # 2. budget exhausted
 d, res, ev = go("budget", Scripted([response([fc("list_dir", path=".")])] * 10), max_calls=3)
 check("budget outcome", res["outcome"] == "budget_exhausted" and res["tool_calls"] == 3, res)

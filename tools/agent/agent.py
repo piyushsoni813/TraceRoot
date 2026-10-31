@@ -1,6 +1,6 @@
 """Investigator agent loop: Gemini function calling over the sandbox tools.
 
-usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N]
+usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N] [--protocol=v1|v2] [--key-env=NAME]
 
 model may be a comma separated chain (m1,m2,m3): when one model's daily quota ends the run continues on the next.
 A model name containing '-live' uses the Live API (WebSocket, audio-only models; only tool calls are used).
@@ -20,6 +20,16 @@ from tools import Toolset, SPECS, TOOLS_HASH
 import report as report_mod
 import evidence_check
 
+PROTOCOL = "v2"  # v1: round 1 behaviour; v2 adds the checkpoint guidance below (docs/budget-analysis.md)
+HYP_CHECKPOINT, REPAIR_CHECKPOINT, THRASH_CYCLES = 15, 25, 3
+GUIDANCE = {
+    "hypothesis": ("[guidance] {n} tool calls used and no hypothesis recorded yet. Record your competing hypotheses now "
+                   "(record_hypothesis), then test them."),
+    "repair": ("[guidance] {n} tool calls used and no fix applied yet. Pick the best-supported hypothesis and make the "
+               "smallest fix now with apply_edit, then run the tests."),
+    "thrash": ("[guidance] Your last {k} edits were each followed by a failing test run. Stop editing. Read the failing "
+               "test output carefully and update your hypotheses before the next edit."),
+}
 KEY_ENV = "GEMINI_API_KEY"  # which variable holds the key; change with --key-env=NAME
 
 
@@ -470,12 +480,14 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
            "user_prompt_sha256": sha(user_text), "gen_config": GEN_CONFIG,
            "limits": {"tool_calls": max_calls, "active_seconds": max_seconds, "wall_seconds": MAX_WALL_SECONDS,
                       "context_tokens": MAX_CONTEXT_TOKENS, "note": "time spent waiting on rate limits is excluded from active_seconds"},
-           "sandbox_image": "traceroot-sandbox:1", "code_commit": code_commit(), "key_env": KEY_ENV}
+           "sandbox_image": "traceroot-sandbox:1", "code_commit": code_commit(), "key_env": KEY_ENV,
+           "protocol": PROTOCOL}
     json.dump(cfg, open(f"{run_dir}/run.json", "w"), indent=2)
     log("run_start", config=cfg, system_prompt=SYSTEM_PROMPT, user_prompt=user_text)
 
     client = client_factory(model, log)
     active = lambda: time.time() - t0 - getattr(client, "waited", 0.0)  # rate-limit waits are not the agent's time
+    sent_guidance, fail_cycles, prev_tests = set(), 0, 0
     models_used = {}
     contents = [{"role": "user", "parts": [{"text": user_text}]}]
     outcome, nudges, total_tokens, last_ctx, model_calls = None, 0, 0, 0, 0
@@ -529,6 +541,23 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
                     left = max_calls - ts.n_calls
                     mins = max(0, (max_seconds - active()) / 60)
                     notice = f"[tool call {ts.n_calls} of {max_calls} used, {left} left, {mins:.0f} min left]"
+                    if PROTOCOL == "v2":
+                        if fc["name"] == "run_tests" and result.startswith("[exit"):
+                            if ts.last_edit_call > prev_tests:  # an edit happened since the previous test run
+                                fail_cycles = 0 if result.startswith("[exit 0]") else fail_cycles + 1
+                            prev_tests = ts.n_calls
+                        due = []
+                        if ts.n_calls >= HYP_CHECKPOINT and not ts.hypotheses and "hypothesis" not in sent_guidance:
+                            due.append("hypothesis")
+                        if ts.n_calls >= REPAIR_CHECKPOINT and not ts.edits and "repair" not in sent_guidance:
+                            due.append("repair")
+                        if fail_cycles >= THRASH_CYCLES:
+                            due.append("thrash")
+                            fail_cycles = 0  # may fire again after three more failing cycles
+                        for kind in due:
+                            sent_guidance.add(kind)
+                            notice += "\n" + GUIDANCE[kind].format(n=ts.n_calls, k=THRASH_CYCLES)
+                            log("guidance", kind=kind, at_call=ts.n_calls)
                     log("tool_call", n=ts.n_calls, name=fc["name"], args=fc.get("args"), result=result, notice=notice,
                         seconds=round(time.time() - t_call, 2))
                     fr = {"name": fc["name"], "response": {"result": f"{result}\n{notice}"}}
@@ -577,6 +606,9 @@ if __name__ == "__main__":
     opts = dict(a[2:].split("=", 1) for a in sys.argv[1:] if a.startswith("--") and "=" in a)
     load_env()
     KEY_ENV = opts.get("key-env", KEY_ENV)
+    PROTOCOL = opts.get("protocol", PROTOCOL)
+    if PROTOCOL not in ("v1", "v2"):
+        raise SystemExit("--protocol must be v1 or v2")
     case, run_dir = pos[0], pos[1]
     model = pos[2] if len(pos) > 2 else "gemini-3.5-flash"
     print(json.dumps(run(case, run_dir, model, max_calls=int(opts.get("max-calls", MAX_CALLS)),

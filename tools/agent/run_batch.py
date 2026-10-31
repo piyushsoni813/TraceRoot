@@ -1,6 +1,6 @@
 """Run the agent on several cases with one model, then score each run.
 
-usage: python -I run_batch.py <model> [variant] [case ...] [--key-env=NAME]
+usage: python -I run_batch.py <model> [variant] [case ...] [--key-env=NAME] [--protocol=v1|v2]
 
 Run directories are experiments/<case>-agent-<model with dots as dashes>-<variant>. A directory that
 already exists is skipped, never overwritten. Each run and each scoring step is a separate process.
@@ -13,7 +13,7 @@ PY = f"{ROOT}/.venv/Scripts/python.exe" if os.path.exists(f"{ROOT}/.venv/Scripts
 CASES = ["filelock-346", "packaging-638", "attrs-1416", "click-3449", "flask-5160"]
 
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
-passthrough = [a for a in sys.argv[1:] if a.startswith("--key-env=")]
+passthrough = [a for a in sys.argv[1:] if a.startswith(("--key-env=", "--protocol="))]
 model = args[0]
 variant = args[1] if len(args) > 1 else "a"
 cases = args[2:] or CASES
