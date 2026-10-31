@@ -3,6 +3,7 @@ import io, json, os, shutil, stat, subprocess, sys, urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import agent
+import report as report_mod
 from sandbox import ROOT
 
 CASE = "click-3449"
@@ -70,9 +71,10 @@ happy = Scripted([
     response([H("H1", "rejected"), H("H2", "supported")]),
     response([fc("apply_edit", path="src/click/__init__.py", search=UNIQ, replace=UNIQ + "  # edited")]),
     response([fc("run_tests", selection=[TEST])]),
-    response([fc("submit", report={"root_cause": {"file": "f", "function": "g", "mechanism": "m"}, "verification": [], "limitations": []})]),
+    response([fc("submit", report={"root_cause": {"file": "src/click/__init__.py", "function": "g", "mechanism": "a long enough explanation of the mechanism"}, "verification": [{"command": "run_tests", "result": "passed", "call": 1}], "limitations": ["not checked on other versions"]})]),
 ])
 d, res, ev = go("happy", happy)
+d_happy, res_happy = d, res
 check("happy outcome submitted", res["outcome"] == "submitted", res)
 check("happy tool calls counted", res["tool_calls"] == 8, res)
 sub = json.load(open(f"{d}/submission.json"))
@@ -84,6 +86,25 @@ check("transcript events", [e["event"] for e in ev][0] == "run_start" and ev[-1]
 check("tool_call numbers are 1..8", [e["n"] for e in ev if e["event"] == "tool_call"] == list(range(1, 9)))
 check("run.json has hashes", set(json.load(open(f"{d}/run.json"))) >= {"tools_hash", "system_prompt_sha256", "user_prompt_sha256", "limits"})
 check("refuses to overwrite a run", subprocess.run([sys.executable, "-I", f"{ROOT}/tools/agent/agent.py", CASE, d], capture_output=True).returncode != 0)
+
+# 1b. the report for the happy run is built, valid and readable
+rep = json.load(open(f"{d_happy}/report.json"))
+check("report is valid", res_happy.get("report_valid") is True, res_happy.get("report_errors"))
+check("report has evidence entries for cited calls", [e["call"] for e in rep["evidence"]] == [1])
+check("evidence excerpt comes from the transcript", "src" in rep["evidence"][0]["excerpt"] or rep["evidence"][0]["excerpt"] != "")
+check("report patch has the diff", "# edited" in rep["patch"]["diff"] and rep["decision"] == "ready for human review")
+md = open(f"{d_happy}/report.md", encoding="utf-8").read()
+check("report.md has the sections", all(h in md for h in ("## Root cause", "## Hypotheses", "## Patch", "## Verification", "## Evidence", "## Limitations")))
+# validator rejects bad reports
+def bad(mut):
+    r = json.loads(json.dumps(rep)); mut(r); return report_mod.validate(r, report_mod.SCHEMA)
+check("rejects missing root cause field", any("root_cause.mechanism" in e for e in bad(lambda r: r["root_cause"].pop("mechanism"))))
+check("rejects one hypothesis", any("at least 2" in e for e in bad(lambda r: r["hypotheses"].pop())))
+check("rejects open status", any("not one of" in e for e in bad(lambda r: r["hypotheses"][0].update(status="open"))))
+check("rejects wrong decision", any("decision" in e for e in bad(lambda r: r.update(decision="merged"))))
+check("rejects empty patch", any("patch" in e for e in bad(lambda r: r["patch"].update(edits=[]))))
+check("rejects extra top-level field", any("not allowed" in e for e in bad(lambda r: r.update(extra=1))))
+check("rejects bool as integer", any("expected integer" in e for e in bad(lambda r: r["verification"][0].update(call=True))))
 
 # 2. budget exhausted
 d, res, ev = go("budget", Scripted([response([fc("list_dir", path=".")])] * 10), max_calls=3)

@@ -69,7 +69,12 @@ results, limitations) for human review. No automatic merge or deploy.
 - Real smoke run (filelock-346): API accepted the tool schema and the agent ran 18 calls, then stopped on HTTP 429.
   Cause: Gemini FREE TIER allows 20 requests per day per model. A run needs up to ~40 requests, so free tier is not enough.
   Smoke run output was deleted (incomplete). **Blocker: need a paid key or billing on the project before real runs.**
-- Next: step 7 report schema, step 8 evidence checker, step 9 scoring, step 10 runs.
+- Step 7 done: `tools/agent/report.schema.json` (JSON Schema subset) and `tools/agent/report.py`. After a submitted run the loop writes
+  `report.json`, `report.md` and `report_validation.json`. Fields: root_cause, hypotheses (each with prediction, status, evidence,
+  cited calls), evidence (cited calls resolved to tool, args and a 400 char excerpt from the transcript), patch (edits and diff),
+  verification, limitations, decision (always "ready for human review"). Structure only: it checks every cited call exists.
+  Whether the output supports the claim is step 8.
+- Next: step 8 evidence checker, step 9 scoring, step 10 runs (needs a paid Gemini key first).
 
 ## Not yet done / known gaps
 - Git repository has no commits; nothing is under version control.

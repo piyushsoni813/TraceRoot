@@ -11,6 +11,7 @@ import hashlib, json, os, sys, time, urllib.error, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sandbox import Sandbox, ROOT
 from tools import Toolset, SPECS, TOOLS_HASH
+import report as report_mod
 
 MAX_CALLS = 40
 MAX_SECONDS = 15 * 60
@@ -172,6 +173,10 @@ def run(case, run_dir, model, client_factory=GeminiClient, max_calls=MAX_CALLS, 
         n_calls = ts.n_calls
     result = {"outcome": outcome, "tool_calls": n_calls, "model_calls": model_calls,
               "seconds": round(time.time() - t0, 1), "total_tokens": total_tokens, "last_context_tokens": last_ctx}
+    json.dump(result, open(f"{run_dir}/result.json", "w"), indent=2)  # report.py reads this
+    if outcome == "submitted":
+        errors = report_mod.write(run_dir)
+        result["report_valid"], result["report_errors"] = not errors, errors
     log("run_end", **result)
     json.dump(result, open(f"{run_dir}/result.json", "w"), indent=2)
     tlog.close()

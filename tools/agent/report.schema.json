@@ -1,0 +1,101 @@
+{
+  "type": "object",
+  "required": ["case_id", "model", "run", "root_cause", "hypotheses", "evidence", "patch", "verification", "limitations", "decision"],
+  "additionalProperties": false,
+  "properties": {
+    "case_id": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "run": {
+      "type": "object",
+      "required": ["outcome", "tool_calls", "seconds", "total_tokens"],
+      "additionalProperties": false,
+      "properties": {
+        "outcome": {"type": "string", "enum": ["submitted"]},
+        "tool_calls": {"type": "integer", "minimum": 1},
+        "seconds": {"type": "number", "minimum": 0},
+        "total_tokens": {"type": "integer", "minimum": 0}
+      }
+    },
+    "root_cause": {
+      "type": "object",
+      "required": ["file", "function", "mechanism"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "function": {"type": "string", "minLength": 1},
+        "mechanism": {"type": "string", "minLength": 20},
+        "breaking_commit": {"type": "string"}
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "predicts", "status", "evidence", "calls"],
+        "additionalProperties": true,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "text": {"type": "string", "minLength": 1},
+          "predicts": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "enum": ["supported", "rejected"]},
+          "evidence": {"type": "string", "minLength": 1},
+          "calls": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}}
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["call", "tool", "args", "excerpt"],
+        "additionalProperties": false,
+        "properties": {
+          "call": {"type": "integer", "minimum": 1},
+          "tool": {"type": "string", "minLength": 1},
+          "args": {"type": "object"},
+          "excerpt": {"type": "string"}
+        }
+      }
+    },
+    "patch": {
+      "type": "object",
+      "required": ["edits", "diff"],
+      "additionalProperties": false,
+      "properties": {
+        "edits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["path", "search", "replace"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "search": {"type": "string", "minLength": 1},
+              "replace": {"type": "string"}
+            }
+          }
+        },
+        "diff": {"type": "string", "minLength": 1}
+      }
+    },
+    "verification": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["command", "result", "call"],
+        "additionalProperties": false,
+        "properties": {
+          "command": {"type": "string", "minLength": 1},
+          "result": {"type": "string", "minLength": 1},
+          "call": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "decision": {"type": "string", "enum": ["ready for human review"]}
+  }
+}
