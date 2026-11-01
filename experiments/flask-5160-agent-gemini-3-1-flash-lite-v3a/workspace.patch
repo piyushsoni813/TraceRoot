@@ -1,0 +1,28 @@
+diff --git a/src/flask/helpers.py b/src/flask/helpers.py
+index 4e8bc8b8..4c8280d4 100644
+--- a/src/flask/helpers.py
++++ b/src/flask/helpers.py
+@@ -575,6 +575,9 @@ def get_root_path(import_name: str) -> str:
+         return os.path.dirname(os.path.abspath(mod.__file__))
+ 
+     # Next attempt: check the loader.
++    if import_name == "__main__":
++        return os.getcwd()
++
+     spec = importlib.util.find_spec(import_name)
+     loader = spec.loader if spec is not None else None
+ 
+diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py
+index 3c23ef97..5e6bd678 100644
+--- a/src/flask/scaffold.py
++++ b/src/flask/scaffold.py
+@@ -817,6 +817,9 @@ def _find_package_path(import_name):
+     """Find the path that contains the package or module."""
+     root_mod_name, _, _ = import_name.partition(".")
+ 
++    if root_mod_name == "__main__":
++        return os.getcwd()
++
+     try:
+         root_spec = importlib.util.find_spec(root_mod_name)
+ 

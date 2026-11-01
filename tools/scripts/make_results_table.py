@@ -82,12 +82,16 @@ union = sum(1 for c in CASES if solved_by_case[c])
 DRIVERS_V2 = [d for d in DRIVERS if not d[1].startswith("gemini-3-8-flash+")]
 table_v2, solved_v2 = build(DRIVERS_V2, "v2?")
 union_v2 = sum(1 for c in CASES if solved_v2[c])
-DRIVERS_V3 = [d for d in DRIVERS_V2 if d[1] != "gemini-3-1-flash-lite"]  # 3.1 Flash Lite waits for the 503 storms to pass
-table_v3, solved_v3 = build(DRIVERS_V3, "v3?")
+table_v3, solved_v3 = build(DRIVERS_V2, "v3?")
 union_v3 = sum(1 for c in CASES if solved_v3[c])
-contradicted = lambda pat: sum(json.load(open(f))["counts"]["contradicted"]
-                               for f in glob.glob(f"{ROOT}/experiments/*-agent-*-{pat}/evidence_check.json")
-                               if "gemini-3-1-flash-lite-" not in f)
+def contradicted(pat):  # counted over the cells in the table: the last attempt per driver and case
+    n = 0
+    for _, slug in DRIVERS_V2:
+        for c in CASES:
+            rs = runs(c, slug, pat)
+            if rs and os.path.exists(f"{rs[-1][1]}/evidence_check.json"):
+                n += json.load(open(f"{rs[-1][1]}/evidence_check.json"))["counts"]["contradicted"]
+    return n
 checkers = sorted({json.load(open(f)).get("checker_commit", "?") for f in glob.glob(f"{ROOT}/experiments/*-agent-*/evidence_check.json")})
 print(table)
 print("cases solved by at least one driver:", union)
@@ -138,10 +142,11 @@ Notes on v2:
 - Gemini 3.5 Flash Lite went from 3 to 4 of 5; filelock was solved after the repair checkpoint fired at call 25.
 - Gemini 3.8 Live stayed at 2 of 5. On filelock it made 11 edits but checked them with `run_python`, not `run_tests`, so the
   thrash guard (which counts failing `run_tests` only) never fired. A gap in v2.
-- Gemini 3.1 Flash Lite fell from 3 to 1 of 5, but three of its four failures were caused by the service: HTTP 503 on 17 to 18
-  requests, single replies taking up to 585 s. packaging stopped on 503; filelock and attrs ran out of active time because a
-  failed request's hanging time was counted as the agent's time. That harness bug is fixed (the time is now counted as
-  waiting); these three cells need a rerun before v2 can be judged on this driver.
+- Gemini 3.1 Flash Lite `a` lost filelock, packaging and attrs to the service: HTTP 503 on 11 to 18 requests, single replies
+  taking up to 585 s, and a harness bug that counted a failed request's hanging time as the agent's time. After the fix (that
+  time now counts as waiting) `b` reran the three on 2026-11-02 with no 503 storm: filelock and packaging solved, attrs used
+  all 40 calls. A first `b` attempt on 2026-11-01 stopped on 503 and was deleted before it finished; no result was kept from it.
+  The thrash guard fired on filelock `b` at call 20 and the run then solved it.
 - Two v2 reports have a `contradicted` verification: Gemini 3.5 Flash Lite cited call numbers one off from the output it
   quoted (for example it quoted the result of call 28 under call 31).
 
@@ -149,20 +154,23 @@ Notes on v2:
 
 v2 plus two changes: the thrash guard also counts failing `run_python` checks after an edit, and every tool result sent to
 the model starts with "[call N]" (the transcript keeps the bare result). Run folders end in `-v3a`, reruns in `-v3b`.
-2026-11-01. Gemini 3.1 Flash Lite is not in this round yet: its v2 rerun on 2026-11-01 hit HTTP 503 on every retry.
+2026-11-01 (Gemini 3.1 Flash Lite on 2026-11-02, after the 503 storms of 2026-11-01 ended).
 
 {table_v3}
 
-Cases solved by at least one v3 driver: {union_v3} of 5. Contradicted evidence items, same three drivers: v2 {contradicted("v2?")}, v3 {contradicted("v3?")}.
+Cases solved by at least one v3 driver: {union_v3} of 5. Contradicted evidence items over all table cells: v2 {contradicted("v2?")}, v3 {contradicted("v3?")}.
 
 Notes on v3:
 - Solve counts did not improve: Gemini 3.1 Flash Live 4 of 5 (v2 5 of 5), Gemini 3.5 Flash Lite 4 of 5 (same cells as v2),
-  Gemini 3.8 Live 2 of 5 (it gained filelock and lost flask). No v3 driver solved click; in v2 only Gemini 3.1 Flash Live did.
+  Gemini 3.1 Flash Lite 3 of 5 (v2 3 of 5; it gained attrs and lost filelock), Gemini 3.8 Live 2 of 5 (it gained filelock and
+  lost flask). No v3 driver solved click; in v2 only Gemini 3.1 Flash Live did.
+- Gemini 3.1 Flash Lite click ended after four empty replies marked `MAX_TOKENS` with zero output tokens (the limit is 16384),
+  which looks like a service fault; the loop nudged each one and stopped after the fourth.
 - Gemini 3.1 Flash Live click `a` stopped before its first call when the Live connection closed (WebSocket 1008, a service
   error); `b` reran it and used all 40 calls.
 - The new thrash guard fired once, on Gemini 3.8 Live filelock at call 25. The model kept editing anyway and passed the tests
   on its last edit (the run used all 40 calls, with submit as the last). It did not update its hypotheses after the warning.
-- No v3 report has a `contradicted` evidence item (v2, same drivers: see the count above). This fits the "[call N]" change, but
+- No v3 report has a `contradicted` evidence item (v2: see the count above). This fits the "[call N]" change, but
   the number of runs is small.
 - One attempt per cell. A loss or gain of one case is within run-to-run noise, so v3 is not better or worse at solving on this
   evidence; its clear effect so far is on citations.

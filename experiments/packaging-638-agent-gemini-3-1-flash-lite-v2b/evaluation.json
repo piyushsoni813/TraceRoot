@@ -1,0 +1,94 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "packaging-638",
+  "model": "gemini-3.1-flash-lite",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "2222 passed, 436 warnings in 1.59s"
+    ],
+    "applied_diff": "diff --git a/src/packaging/markers.py b/src/packaging/markers.py\nindex a5bf35c..8c91548 100644\n--- a/src/packaging/markers.py\n+++ b/src/packaging/markers.py\n@@ -121,7 +121,7 @@ def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n     # > When comparing extra names, tools MUST normalize the names being\n     # > compared using the semantics outlined in PEP 503 for names\n     if key == \"extra\":\n-        return tuple(canonicalize_name(v) for v in values)\n+        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n \n     # other environment markers don't have such standards\n     return values\n"
+  },
+  "root_cause": {
+    "status": "partial",
+    "commit_match": false,
+    "file_match": true,
+    "function_match": false,
+    "fix_files": [
+      "src/packaging/markers.py"
+    ],
+    "claimed": {
+      "file": "src/packaging/markers.py",
+      "function": "_normalize",
+      "breaking_commit": ""
+    },
+    "needs_human_review": true
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": true,
+    "counts": {
+      "verified": 7,
+      "unverifiable": 0,
+      "contradicted": 0
+    },
+    "total": 7,
+    "verified_fraction": 1.0,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 9 is run_python with output",
+        "ref": "H1 -> call 9"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 9 is run_python with output",
+        "ref": "H2 -> call 9"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 15 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 9"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 18 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[1] -> call 15"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/packaging/markers.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 19,
+    "model_calls": 19,
+    "total_tokens": 86650,
+    "seconds": 123.0,
+    "active_seconds": 110.1,
+    "waited_seconds": 12.9,
+    "models_used": {
+      "gemini-3.1-flash-lite": 19
+    }
+  }
+}

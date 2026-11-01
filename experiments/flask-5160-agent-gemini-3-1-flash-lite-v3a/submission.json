@@ -1,0 +1,65 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    root_mod_name, _, _ = import_name.partition(\".\")\n\n    try:\n        root_spec = importlib.util.find_spec(root_mod_name)",
+      "replace": "    root_mod_name, _, _ = import_name.partition(\".\")\n\n    if root_mod_name == \"__main__\":\n        return os.getcwd()\n\n    try:\n        root_spec = importlib.util.find_spec(root_mod_name)"
+    },
+    {
+      "path": "src/flask/helpers.py",
+      "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # Next attempt: check the loader.\n    if import_name == \"__main__\":\n        return os.getcwd()\n\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None"
+    }
+  ],
+  "report": {
+    "limitations": [
+      "Only verified the fix with a minimal reproduction script and existing tests. Did not run the full test suite, but the change is very localized and safe."
+    ],
+    "root_cause": {
+      "mechanism": "`importlib.util.find_spec(\"__main__\")` raises a `ValueError` when `__main__.__spec__` is `None`, which occurs when running a script directly. The code was calling `find_spec` before checking if the module was `__main__`.",
+      "file": "src/flask/helpers.py",
+      "function": "get_root_path"
+    },
+    "verification": [
+      {
+        "result": "Success",
+        "command": "python -c \"import os, sys; sys.modules['__main__'].__spec__ = None; from flask import Flask; app = Flask('__main__'); print('Success')\"",
+        "call": 16
+      },
+      {
+        "result": "158 passed in 2.00s",
+        "call": 21,
+        "command": "pytest tests/test_basic.py tests/test_helpers.py"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The issue is that `importlib.util.find_spec(\"__main__\")` raises a ValueError when `__main__.__spec__` is None, which happens when running a script directly. The code in `_find_package_path` expects this to be handled, but it seems it's not being caught correctly or the logic around it is flawed.",
+      "predicts": "If I change the code to handle the ValueError from find_spec, the application will start correctly.",
+      "status": "supported",
+      "evidence": "The issue was indeed that `importlib.util.find_spec(\"__main__\")` raises a `ValueError` when `__main__.__spec__` is `None`. Handling this by checking `import_name == \"__main__\"` before calling `find_spec` fixes the issue.",
+      "calls": [
+        12,
+        16
+      ],
+      "recorded_at_call": 9,
+      "updated_at_call": 18
+    },
+    {
+      "id": "H2",
+      "text": "The `_find_package_path` function should explicitly check if `root_mod_name` is `__main__` and return `os.getcwd()` immediately, as it is already intended to do for `__main__` later in the function (line 861).",
+      "predicts": "If I check if root_mod_name == \"__main__\" before calling find_spec, it will avoid the ValueError.",
+      "status": "supported",
+      "evidence": "The fix in `src/flask/helpers.py` resolved the `ValueError` when constructing `Flask(\"__main__\")`. The previous fix in `src/flask/scaffold.py` was also correct but `get_root_path` was called first.",
+      "calls": [
+        12,
+        16
+      ],
+      "recorded_at_call": 10,
+      "updated_at_call": 17
+    }
+  ],
+  "decision": "ready for human review"
+}

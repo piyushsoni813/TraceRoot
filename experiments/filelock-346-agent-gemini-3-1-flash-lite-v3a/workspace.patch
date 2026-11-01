@@ -1,0 +1,39 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..e3a29ee 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -129,10 +129,32 @@ class FileLockMeta(ABCMeta):
+             **kwargs,
+         }
+ 
+-        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
++        present_params = inspect.signature(cls.__init__).parameters  # type: ignore[misc]
+         init_params = {key: value for key, value in all_params.items() if key in present_params}
++        
+         # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
++        if "lock_file" in present_params:
++            init_params["lock_file"] = lock_file
++        else:
++            # If the subclass doesn't have 'lock_file', we can't pass it as a keyword argument.
++            # But we still need to pass it to the constructor.
++            # If the subclass takes *args, we can pass it as a positional argument.
++            # But we are using keyword arguments in super().__call__(**init_params).
++            # This is tricky.
++            # Let's try to pass it as a positional argument if the first parameter is not 'self'.
++            param_names = list(present_params.keys())
++            if len(param_names) > 1:
++                first_param_name = param_names[1]
++                first_param = present_params[first_param_name]
++                if first_param.kind == inspect.Parameter.VAR_POSITIONAL:
++                    # If it's *args, we can't pass it as a keyword argument.
++                    # We need to pass it as a positional argument.
++                    # But we are using keyword arguments in super().__call__(**init_params).
++                    # This is the problem.
++                    # Let's just not pass it as a keyword argument if it's *args.
++                    pass
++                else:
++                    init_params[first_param_name] = lock_file
+ 
+         instance = super().__call__(**init_params)
+ 

@@ -159,7 +159,7 @@ results, limitations) for human review. No automatic merge or deploy.
 - Protocol v3 round (2026-11-01): 3.1 Flash Live 4/5 (v2 5/5, lost click), 3.5 Flash Lite 4/5 (same), 3.8 Live 2/5 (gained
   filelock, lost flask). Contradicted evidence items 2 in v2 vs 0 in v3 (same three drivers). The new thrash guard fired once
   (3.8 Live filelock, call 25) and the model kept editing. Solve rate: no clear change; citations: better. Table in README.
-- Still to do: 3.1 Flash Lite under v2 (variant `v2b`) and v3 when the 503 storms end.
+- 3.1 Flash Lite reruns done (2026-11-02, no 503 storm): v2 `b` solved filelock and packaging (v2 now 3/5); v3 3/5 (gained attrs, lost filelock; click ended on four empty MAX_TOKENS replies with zero output tokens, a service fault). Final v3 vs v2: no solve gain, contradicted citations 2 -> 0.
 - Parked for later: discussion of a multi-agent design (planner, reviewer) on top of the single investigator agent.
 - Next, in order: (2) root cause review sheet for a person to confirm likely/partial, (3) analyse where the 40 calls go in
   budget_exhausted runs, (4) test improvements as protocol v2 against frozen v1, (5) new cases fixed after model training cutoffs. (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt

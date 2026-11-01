@@ -1,0 +1,63 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)\n",
+      "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "file": "src/packaging/markers.py",
+      "mechanism": "The _normalize function was unconditionally calling canonicalize_name on values when the key was 'extra'. When 'extra' was None in the environment, this caused a TypeError because canonicalize_name expects a string.",
+      "function": "_normalize"
+    },
+    "limitations": [
+      "None identified. The fix is simple and verified."
+    ],
+    "verification": [
+      {
+        "call": 13,
+        "result": "Result: False",
+        "command": "python -c 'from packaging.markers import Marker; marker = Marker(\"extra == \\\"opt-feature\\\"\"); print(marker.evaluate({\"extra\": None}))'"
+      },
+      {
+        "command": "python -c 'from packaging.markers import Marker; marker = Marker(\"extra == \\\"opt-feature\\\"\"); print(marker.evaluate({\"extra\": \"opt-feature\"}))'",
+        "result": "Result: True",
+        "call": 14
+      },
+      {
+        "command": "pytest tests/test_markers.py",
+        "result": "2221 passed in 3.95s",
+        "call": 16
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The issue is that _normalize assumes all values passed to it are strings, but when 'extra' is None in the environment, it passes None to canonicalize_name, which expects a string.",
+      "predicts": "The fix will be to handle None in _normalize or before calling it. If I change _normalize to handle None, it should fix the issue.",
+      "status": "supported",
+      "evidence": "canonicalize_name indeed fails with None.",
+      "calls": [
+        9
+      ],
+      "recorded_at_call": 7,
+      "updated_at_call": 10
+    },
+    {
+      "id": "H2",
+      "text": "The environment dictionary is being passed with 'extra': None, which is not a valid value for a marker evaluation if it's expected to be a string. The code should handle None as a non-existent extra.",
+      "predicts": "The issue is that the environment dictionary should not contain None for 'extra' if it's not set, or the code should handle it. If I change the code to skip normalization if the value is None, it should fix the issue.",
+      "status": "rejected",
+      "evidence": "The environment dictionary is passed by the user, and the documentation/existing behavior suggests it should be handled. The code in _normalize is where the crash happens.",
+      "calls": [
+        9
+      ],
+      "recorded_at_call": 8,
+      "updated_at_call": 11
+    }
+  ],
+  "decision": "ready for human review"
+}

@@ -1,0 +1,63 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)",
+      "replace": "    if key == \"extra\" and v is not None:\n        return canonicalize_name(v)\n    return v"
+    },
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\" and v is not None:\n        return canonicalize_name(v)\n    return v",
+      "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)"
+    }
+  ],
+  "report": {
+    "limitations": [
+      "None identified. The fix seems robust and covers the reported issue while maintaining existing functionality."
+    ],
+    "verification": [
+      {
+        "result": "Result: False",
+        "command": "python reproduction script",
+        "call": 15
+      },
+      {
+        "result": "2221 passed in 4.40s",
+        "call": 18,
+        "command": "pytest tests/test_markers.py"
+      }
+    ],
+    "root_cause": {
+      "mechanism": "The _normalize function was unconditionally calling canonicalize_name on values when the key was 'extra'. When 'extra' was None, canonicalize_name raised a TypeError because it expects a string. The fix adds a check to skip canonicalization if the value is None.",
+      "file": "src/packaging/markers.py",
+      "function": "_normalize"
+    }
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The _normalize function assumes that values passed to it are strings, but when 'extra' is None in the environment, it receives None, causing canonicalize_name to fail.",
+      "predicts": "If I change _normalize to handle None by returning it as is (or converting to empty string), the TypeError will be gone and the marker will evaluate correctly.",
+      "status": "supported",
+      "evidence": "canonicalize_name fails with None.",
+      "calls": [
+        9
+      ],
+      "recorded_at_call": 7,
+      "updated_at_call": 10
+    },
+    {
+      "id": "H2",
+      "text": "The environment dictionary contains None for 'extra', which is then passed to _normalize. If we ensure the environment lookup returns a string, we avoid the issue.",
+      "predicts": "If I change the environment lookup to default to an empty string instead of None, the TypeError will be gone.",
+      "status": "supported",
+      "evidence": "The issue is indeed that None is passed to canonicalize_name. Changing the environment lookup to return a string would fix it.",
+      "calls": [
+        9
+      ],
+      "recorded_at_call": 8,
+      "updated_at_call": 11
+    }
+  ],
+  "decision": "ready for human review"
+}

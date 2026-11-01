@@ -190,7 +190,7 @@ Run folders end in `-v2a`. One attempt per cell, 2026-10-31.
 | --- | --- | --- | --- | --- | --- | --- |
 | Gemini 3.1 Flash Live (preview) | **success**, root cause match, evidence 14/16 | **success**, root cause match, evidence 15/16 | **success**, root cause likely, evidence 50/52 | **success**, root cause partial, evidence 41/47 | **success**, root cause match, evidence 17/24 | 5/5 |
 | Gemini 3.5 Flash Lite | **success**, root cause likely, evidence 13/22 | **success**, root cause partial, evidence 9/12 | **success**, root cause likely, evidence 25/29 | no submit (40 calls used) | **success**, root cause likely, evidence 16/21 | 4/5 |
-| Gemini 3.1 Flash Lite | no submit (15 active minutes used) | stopped: HTTP 503 (busy) | no submit (15 active minutes used) | no submit (40 calls used) | **success**, root cause likely, evidence 7/8 | 1/5 |
+| Gemini 3.1 Flash Lite | **success** (b), root cause likely, evidence 10/13 | **success** (b), root cause partial, evidence 7/7 | no submit (40 calls used) (b) | no submit (40 calls used) | **success**, root cause likely, evidence 7/8 | 3/5 |
 | Gemini 3.8 Live | no submit (40 calls used) | **success**, root cause partial, evidence 14/16 | no submit (40 calls used) | no submit (40 calls used) | **success**, root cause match, evidence 5/8 | 2/5 |
 
 Cases solved by at least one v2 driver: 5 of 5.
@@ -200,10 +200,11 @@ Notes on v2:
 - Gemini 3.5 Flash Lite went from 3 to 4 of 5; filelock was solved after the repair checkpoint fired at call 25.
 - Gemini 3.8 Live stayed at 2 of 5. On filelock it made 11 edits but checked them with `run_python`, not `run_tests`, so the
   thrash guard (which counts failing `run_tests` only) never fired. A gap in v2.
-- Gemini 3.1 Flash Lite fell from 3 to 1 of 5, but three of its four failures were caused by the service: HTTP 503 on 17 to 18
-  requests, single replies taking up to 585 s. packaging stopped on 503; filelock and attrs ran out of active time because a
-  failed request's hanging time was counted as the agent's time. That harness bug is fixed (the time is now counted as
-  waiting); these three cells need a rerun before v2 can be judged on this driver.
+- Gemini 3.1 Flash Lite `a` lost filelock, packaging and attrs to the service: HTTP 503 on 11 to 18 requests, single replies
+  taking up to 585 s, and a harness bug that counted a failed request's hanging time as the agent's time. After the fix (that
+  time now counts as waiting) `b` reran the three on 2026-11-02 with no 503 storm: filelock and packaging solved, attrs used
+  all 40 calls. A first `b` attempt on 2026-11-01 stopped on 503 and was deleted before it finished; no result was kept from it.
+  The thrash guard fired on filelock `b` at call 20 and the run then solved it.
 - Two v2 reports have a `contradicted` verification: Gemini 3.5 Flash Lite cited call numbers one off from the output it
   quoted (for example it quoted the result of call 28 under call 31).
 
@@ -211,24 +212,28 @@ Notes on v2:
 
 v2 plus two changes: the thrash guard also counts failing `run_python` checks after an edit, and every tool result sent to
 the model starts with "[call N]" (the transcript keeps the bare result). Run folders end in `-v3a`, reruns in `-v3b`.
-2026-11-01. Gemini 3.1 Flash Lite is not in this round yet: its v2 rerun on 2026-11-01 hit HTTP 503 on every retry.
+2026-11-01 (Gemini 3.1 Flash Lite on 2026-11-02, after the 503 storms of 2026-11-01 ended).
 
 | Driver | filelock-346 | packaging-638 | attrs-1416 | click-3449 | flask-5160 | Solved |
 | --- | --- | --- | --- | --- | --- | --- |
 | Gemini 3.1 Flash Live (preview) | **success**, root cause likely, evidence 8/9 | **success**, root cause partial, evidence 16/16 | **success**, root cause likely, evidence 13/14 | no submit (40 calls used) (b) | **success**, root cause match, evidence 16/16 | 4/5 |
 | Gemini 3.5 Flash Lite | **success**, root cause likely, evidence 17/19 | **success**, root cause partial, evidence 31/43 | **success**, root cause likely, evidence 10/11 | no submit (40 calls used) | **success**, root cause likely, evidence 12/13 | 4/5 |
+| Gemini 3.1 Flash Lite | no submit (40 calls used) | **success**, root cause partial, evidence 8/8 | **success**, root cause partial, evidence 10/11 | no submit (stopped calling tools) | **success**, root cause likely, evidence 23/23 | 3/5 |
 | Gemini 3.8 Live | **success**, root cause match, evidence 14/16 | **success**, root cause partial, evidence 8/8 | no submit (40 calls used) | no submit (40 calls used) | no submit (40 calls used) | 2/5 |
 
-Cases solved by at least one v3 driver: 4 of 5. Contradicted evidence items, same three drivers: v2 2, v3 0.
+Cases solved by at least one v3 driver: 4 of 5. Contradicted evidence items over all table cells: v2 2, v3 0.
 
 Notes on v3:
 - Solve counts did not improve: Gemini 3.1 Flash Live 4 of 5 (v2 5 of 5), Gemini 3.5 Flash Lite 4 of 5 (same cells as v2),
-  Gemini 3.8 Live 2 of 5 (it gained filelock and lost flask). No v3 driver solved click; in v2 only Gemini 3.1 Flash Live did.
+  Gemini 3.1 Flash Lite 3 of 5 (v2 3 of 5; it gained attrs and lost filelock), Gemini 3.8 Live 2 of 5 (it gained filelock and
+  lost flask). No v3 driver solved click; in v2 only Gemini 3.1 Flash Live did.
+- Gemini 3.1 Flash Lite click ended after four empty replies marked `MAX_TOKENS` with zero output tokens (the limit is 16384),
+  which looks like a service fault; the loop nudged each one and stopped after the fourth.
 - Gemini 3.1 Flash Live click `a` stopped before its first call when the Live connection closed (WebSocket 1008, a service
   error); `b` reran it and used all 40 calls.
 - The new thrash guard fired once, on Gemini 3.8 Live filelock at call 25. The model kept editing anyway and passed the tests
   on its last edit (the run used all 40 calls, with submit as the last). It did not update its hypotheses after the warning.
-- No v3 report has a `contradicted` evidence item (v2, same drivers: see the count above). This fits the "[call N]" change, but
+- No v3 report has a `contradicted` evidence item (v2: see the count above). This fits the "[call N]" change, but
   the number of runs is small.
 - One attempt per cell. A loss or gain of one case is within run-to-run noise, so v3 is not better or worse at solving on this
   evidence; its clear effect so far is on citations.

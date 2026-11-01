@@ -1,0 +1,29 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..8310724 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -132,7 +132,23 @@ class FileLockMeta(ABCMeta):
+         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+         init_params = {key: value for key, value in all_params.items() if key in present_params}
+         # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
++        if "lock_file" in present_params:
++            init_params["lock_file"] = lock_file
++        else:
++            # If the subclass does not accept `lock_file`, we assume it's the first argument
++            # after `self`.
++            sig = inspect.signature(cls.__init__)
++            params = list(sig.parameters.values())
++            if len(params) > 1 and params[1].kind != inspect.Parameter.VAR_POSITIONAL:
++                init_params[params[1].name] = lock_file
++            else:
++                # If we can't pass it as a keyword argument, we have to pass it as a positional argument.
++                # But we are calling `MyFileLock(...)` with keyword arguments.
++                # This is tricky.
++                # Let's just pass it as `lock_file` and hope for the best, or maybe
++                # we should not pass it if we can't.
++                # But `BaseFileLock.__init__` needs it.
++                init_params["lock_file"] = lock_file
+ 
+         instance = super().__call__(**init_params)
+ 

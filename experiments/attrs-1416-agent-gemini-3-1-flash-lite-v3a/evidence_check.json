@@ -1,0 +1,79 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 10,
+    "unverifiable": 1,
+    "contradicted": 0
+  },
+  "total": 11,
+  "verified_fraction": 0.909,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 20 is run_python with output",
+      "ref": "H1 -> call 20"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 21 is run_python with output",
+      "ref": "H1 -> call 21"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 23 is run_python with output",
+      "ref": "H1 -> call 23"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 24 is run_python with output",
+      "ref": "H1 -> call 24"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 25 is run_python with output",
+      "ref": "H1 -> call 25"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 18 is run_python with output",
+      "ref": "H2 -> call 18"
+    },
+    {
+      "kind": "verification",
+      "status": "unverifiable",
+      "detail": "call 31 ran before the last edit (call 36)",
+      "ref": "verification[0] -> call 18"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 39 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 31"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/attr/_make.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}
