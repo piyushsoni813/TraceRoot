@@ -1,0 +1,67 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 8,
+    "unverifiable": 1,
+    "contradicted": 0
+  },
+  "total": 9,
+  "verified_fraction": 0.889,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 5 is run_python with output",
+      "ref": "H1 -> call 5"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 5 is run_python with output",
+      "ref": "H2 -> call 5"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 17 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 5"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 20 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 17"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 21 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[2] -> call 20"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`BaseFileLock.__init__` appears nowhere in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/filelock/_api.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "case_id": "flask-5160",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 20,
+    "seconds": 28.5,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "mechanism": "The commit replaced `pkgutil.get_loader(root_mod_name)` with `importlib.util.find_spec(root_mod_name)`. When running a script directly, `root_mod_name` is `\"__main__\"`. If `__main__.__spec__` is `None` (which is common when running scripts), `importlib.util.find_spec(\"__main__\")` raises a `ValueError`, whereas `pkgutil.get_loader` did not.",
+    "file": "src/flask/scaffold.py",
+    "function": "_find_package_path",
+    "breaking_commit": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The recent change replaced pkgutil.get_loader with importlib.util.find_spec. When running as a script, __name__ is \"__main__\". importlib.util.find_spec(\"__main__\") raises ValueError if __main__.__spec__ is None, which happens when running a script directly. pkgutil.get_loader(\"__main__\") likely handled this gracefully or returned None.",
+      "predicts": "Running a script that creates Flask(__name__) will fail with ValueError: __main__.__spec__ is None.",
+      "status": "supported",
+      "evidence": "pkgutil.get_loader('__main__') returns a loader, while importlib.util.find_spec('__main__') raises ValueError when __main__.__spec__ is None.",
+      "calls": [
+        11,
+        12
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The issue is specific to Python 3.11+ where __main__.__spec__ behavior might have changed, and the new importlib code in Flask interacts poorly with it.",
+      "predicts": "Running a script that creates Flask(__name__) will fail with ValueError: __main__.__spec__ is None, but only on Python 3.11+.",
+      "status": "rejected",
+      "evidence": "The issue is reproduced in the current environment, confirming that the change in implementation is the cause, regardless of specific Python version behavior changes (though it might be relevant why __spec__ is None). H1 provides a sufficient explanation.",
+      "calls": [
+        11,
+        12
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 11,
+      "tool": "run_python",
+      "args": {
+        "code": "import pkgutil\nimport sys\n\n# Simulate running as a script\nsys.modules['__main__'].__spec__ = None\n\ntry:\n    loader = pkgutil.get_loader(\"__main__\")\n    print(f\"pkgutil.get_loader('__main__') returned: {loader}\")\nexcept Exception as e:\n    print(f\"pkgutil.get_loader('__main__') raised: {e}\")\n"
+      },
+      "excerpt": "[exit 0]\npkgutil.get_loader('__main__') returned: <class '_frozen_importlib.BuiltinImporter'>\n"
+    },
+    {
+      "call": 12,
+      "tool": "run_python",
+      "args": {
+        "code": "import importlib.util\nimport sys\n\n# Simulate running as a script\nsys.modules['__main__'].__spec__ = None\n\ntry:\n    spec = importlib.util.find_spec(\"__main__\")\n    print(f\"importlib.util.find_spec('__main__') returned: {spec}\")\nexcept Exception as e:\n    print(f\"importlib.util.find_spec('__main__') raised: {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nimportlib.util.find_spec('__main__') raised: __main__.__spec__ is None\n"
+    },
+    {
+      "call": 16,
+      "tool": "run_python",
+      "args": {
+        "code": "import os\n\n# Create app.py\nwith open(\"app.py\", \"w\") as f:\n    f.write(\"from flask import Flask\\n\")\n    f.write(\"app = Flask(__name__)\\n\")\n    f.write(\"print('App created successfully')\\n\")\n\n# Run app.py\nexit_code = os.system(\"python3 app.py\")\nif exit_code == 0:\n    print(\"Reproduction script passed.\")\nelse:\n    print(f\"Reproduction script failed with exit code {exit_code}.\")\n"
+      },
+      "excerpt": "[exit 0]\nApp created successfully\nReproduction script passed.\n"
+    },
+    {
+      "call": 19,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_basic.py",
+          "tests/test_helpers.py",
+          "tests/test_instance_config.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [ 42%]\n........................................................................ [ 85%]\n........................                                                 [100%]\n168 passed in 2.11s\n"
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/flask/scaffold.py",
+        "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+        "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except ValueError:\n        # __main__.__spec__ is None\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+      }
+    ],
+    "diff": "diff --git a/src/flask/scaffold.py b/src/flask/scaffold.py\nindex 3c23ef97..b3e834d0 100644\n--- a/src/flask/scaffold.py\n+++ b/src/flask/scaffold.py\n@@ -855,7 +855,12 @@ def _find_package_path(import_name):\n             return os.path.dirname(root_spec.origin)\n \n     # we were unable to find the `package_path` using PEP 451 loaders\n-    spec = importlib.util.find_spec(root_mod_name)\n+    try:\n+        spec = importlib.util.find_spec(root_mod_name)\n+    except ValueError:\n+        # __main__.__spec__ is None\n+        spec = None\n+\n     loader = spec.loader if spec is not None else None\n \n     if loader is None or root_mod_name == \"__main__\":\n"
+  },
+  "verification": [
+    {
+      "call": 16,
+      "command": "run_python reproduction script",
+      "result": "App created successfully\nReproduction script passed."
+    },
+    {
+      "result": "168 passed",
+      "call": 19,
+      "command": "run_tests tests/test_basic.py tests/test_helpers.py tests/test_instance_config.py"
+    }
+  ],
+  "limitations": [
+    "I only ran a subset of tests that seemed relevant to application construction and path finding. I did not run the full test suite."
+  ],
+  "decision": "ready for human review"
+}

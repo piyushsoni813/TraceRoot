@@ -1,0 +1,13 @@
+{
+  "outcome": "budget_exhausted",
+  "tool_calls": 40,
+  "model_calls": 40,
+  "seconds": 351.6,
+  "active_seconds": 74.1,
+  "waited_seconds": 277.5,
+  "models_used": {
+    "gemini-3.8-live": 40
+  },
+  "total_tokens": 365136,
+  "last_context_tokens": 13705
+}

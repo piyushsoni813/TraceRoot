@@ -1,0 +1,56 @@
+{
+  "edits": [
+    {
+      "path": "src/attr/_make.py",
+      "search": "    if field_transformer is not None:\n        attrs = field_transformer(cls, attrs)",
+      "replace": "    if field_transformer is not None:\n        attrs = list(field_transformer(cls, attrs))"
+    }
+  ],
+  "report": {
+    "limitations": [],
+    "root_cause": {
+      "mechanism": "When a field_transformer returned an iterator or generator (which is single-pass), attrs iterated over it multiple times for order validation, alias resolution, and constructing AttrsClass, exhausting the iterator/generator on the first iteration. Converting the result of field_transformer to a list ensures that it can be iterated multiple times safely.",
+      "file": "src/attr/_make.py",
+      "function": "_transform_attrs"
+    },
+    "verification": [
+      {
+        "call": 20,
+        "result": "Subclass(dag_id='foo', has_default='default', other=False)\\nSuccess!",
+        "command": "python script with reproducer"
+      },
+      {
+        "result": "275 passed, 1 skipped in 4.82s",
+        "call": 21,
+        "command": "pytest tests/test_hooks.py tests/test_make.py"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The field_transformer function in the user code returns a generator (from `yield`), but `AttrsClass(attrs)` or `_transform_attrs` expects a list or sequence (or `attrs` is used multiple times / exhausted if it's an iterator/generator).",
+      "predicts": "If generator function is exhausted when `AttrsClass(attrs)` is called or when fields are iterated, or if `field_transformer` modifies/returns an iterator instead of a list, `attrs` becomes empty or doesn't work as expected.",
+      "status": "supported",
+      "evidence": "Wrapping generator return value with list(...) in field_transformer makes Base attrs and Subclass attrs populate correctly and instantiation succeed.",
+      "calls": [
+        13
+      ],
+      "recorded_at_call": 11,
+      "updated_at_call": 14
+    },
+    {
+      "id": "H2",
+      "text": "`field_transformer` can return any iterable (including a generator), but attrs code expects a collection/list and might iterate over it multiple times or pass a generator object directly to `AttrsClass(...)` or check operations on it.",
+      "predicts": "Converting `field_transformer` return value to list via `list(field_transformer(...))` or handling iterables/iterators robustly fixes the issue when `field_transformer` returns a generator.",
+      "status": "supported",
+      "evidence": "When field_transformer returns a generator (which is an iterable but single-pass), attrs uses it multiple times (e.g. for order check, alias resolution, and AttrsClass(attrs)), exhausting it on the first use. Converting attrs to list (or list(field_transformer(...))) ensures it can be iterated multiple times.",
+      "calls": [
+        13
+      ],
+      "recorded_at_call": 12,
+      "updated_at_call": 15
+    }
+  ],
+  "decision": "ready for human review"
+}

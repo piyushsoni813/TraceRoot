@@ -1,0 +1,69 @@
+{
+  "edits": [
+    {
+      "path": "src/flask/scaffold.py",
+      "search": "    # we were unable to find the `package_path` using PEP 451 loaders\n    spec = importlib.util.find_spec(root_mod_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # we were unable to find the `package_path` using PEP 451 loaders\n    try:\n        spec = importlib.util.find_spec(root_mod_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    },
+    {
+      "path": "src/flask/helpers.py",
+      "search": "    # Next attempt: check the loader.\n    spec = importlib.util.find_spec(import_name)\n    loader = spec.loader if spec is not None else None",
+      "replace": "    # Next attempt: check the loader.\n    try:\n        spec = importlib.util.find_spec(import_name)\n    except (ImportError, ValueError):\n        spec = None\n\n    loader = spec.loader if spec is not None else None"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "function": "get_root_path and _find_package_path",
+      "mechanism": "When importing or inspecting __main__ (or modules where __spec__ is None), calling importlib.util.find_spec raises a ValueError (__main__.__spec__ is None). Recent changes in Flask replaced pkgutil.get_loader with importlib.util.find_spec without wrapping all find_spec calls in try...except (ImportError, ValueError). Wrapping find_spec calls in try...except (ImportError, ValueError) correctly handles missing specs/ValueError and falls back to loading/cwd logic.",
+      "file": "src/flask/helpers.py and src/flask/scaffold.py"
+    },
+    "verification": [
+      {
+        "call": 29,
+        "command": "python -c \"import sys; from flask import Flask; sys.modules['__main__'].__spec__ = None; app = Flask('__main__'); print(app.instance_path)\"",
+        "result": "App instance path: /work/instance"
+      },
+      {
+        "command": "pytest tests/test_basic.py tests/test_helpers.py",
+        "result": "158 passed in 2.20s",
+        "call": 32
+      }
+    ],
+    "limitations": [
+      "Some unrelated click/click-runner version incompatibility tests in test_cli.py failed due to click version installed in the test environment (mix_stderr argument on CliRunner)."
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "importlib.util.find_spec(\"__main__\") raises ValueError: __main__.__spec__ is None when __main__ has no __spec__ (e.g. running python -c or direct script execution in some python versions/setups where __spec__ is None), but find_spec expects a valid module name or raises ValueError for __main__ if spec is None.",
+      "predicts": "Running a python script that instantiates Flask(__name__) when __name__ == '__main__' will succeed if we handle or check for __main__.__spec__ being None or pass when root_mod_name == \"__main__\" before calling importlib.util.find_spec(__main__)",
+      "status": "supported",
+      "evidence": "importlib.util.find_spec('__main__') raises ValueError: __main__.__spec__ is None at line 858 just like line 821, but line 858 does NOT have a try...except block around importlib.util.find_spec(root_mod_name)!",
+      "calls": [
+        17,
+        18,
+        19,
+        20
+      ],
+      "recorded_at_call": 14,
+      "updated_at_call": 21
+    },
+    {
+      "id": "H2",
+      "text": "The try...except (ImportError, ValueError) block around find_spec in _find_package_path handles __main__ or other ValueError-raising modules, but maybe something else calls find_spec or line 821 doesn't catch it properly, or something else? Let's check line 821 in scaffold.py.",
+      "predicts": "Wrapping importlib.util.find_spec in try...except (ImportError, ValueError) correctly catches ValueError when __main__.__spec__ is None or module name is invalid, falling back to the loader/cwd path logic.",
+      "status": "supported",
+      "evidence": "Line 821 has try...except (ImportError, ValueError), but line 858 does not have try...except (ImportError, ValueError). When line 821 hits ValueError, it falls through to line 858 which calls importlib.util.find_spec(root_mod_name) without try...except, raising ValueError: __main__.__spec__ is None.",
+      "calls": [
+        17,
+        18,
+        19,
+        20
+      ],
+      "recorded_at_call": 15,
+      "updated_at_call": 22
+    }
+  ],
+  "decision": "ready for human review"
+}

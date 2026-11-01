@@ -1,0 +1,271 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 31,
+    "unverifiable": 12,
+    "contradicted": 0
+  },
+  "total": 43,
+  "verified_fraction": 0.721,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 9 is run_python with output",
+      "ref": "H1 -> call 9"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 9 is run_python with output",
+      "ref": "H2 -> call 9"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 19 is read_file with output",
+      "ref": "H3 -> call 19"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 16 is search with output",
+      "ref": "H4 -> call 16"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 33 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 16"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 29 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 33"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`key == \"extra\"` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`_normalize()` appears nowhere in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name(v)` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`key == \"extra\"` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`environment[\"extra\"]` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`{\"extra\": None}` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name(v)` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`\"\" if v is None else canonicalize_name(v)` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`extra == \"opt-feature\"` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`environment_key = \"extra\"` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`lhs_value = environment[\"extra\"]` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`rhs_value = \"opt-feature\"` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`environment[\"extra\"]` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`\"opt-feature\"` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`_normalize(None, \"opt-feature\", key=\"extra\")` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`key == \"extra\"` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`v if v is not None else \"\"` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name(v)` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`key != \"extra\"` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`{\"os_name\": None}` appears nowhere in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`Dict[str, str]` appears in the transcript",
+      "ref": "H3.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H4.evidence"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`Marker.evaluate()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`_normalize()` appears nowhere in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name(v)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`extra == \"opt-feature\"` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`extra == ...` appears nowhere in the transcript",
+      "ref": "H3.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H4.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H4.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`canonicalize_name` appears in the transcript",
+      "ref": "H4.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/packaging/markers.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

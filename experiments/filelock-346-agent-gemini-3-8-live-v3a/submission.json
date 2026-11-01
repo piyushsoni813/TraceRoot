@@ -1,0 +1,96 @@
+{
+  "edits": [
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)\n\n        if is_singleton:\n            cls._instances[str(lock_file)] = instance  # type: ignore[attr-defined]\n\n        return cast(BaseFileLock, instance)\n",
+      "replace": "        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        all_params = {\n            \"lock_file\": lock_file,\n            \"timeout\": timeout,\n            \"mode\": mode,\n            \"thread_local\": thread_local,\n            \"blocking\": blocking,\n            \"is_singleton\": is_singleton,\n            **kwargs,\n        }\n\n        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)\n",
+      "replace": "        instance = super().__call__(\n            lock_file=lock_file,\n            timeout=timeout,\n            mode=mode,\n            thread_local=thread_local,\n            blocking=blocking,\n            is_singleton=is_singleton,\n            **kwargs,\n        )\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        # Workaround to make `__init__`'s params optional in subclasses\n        # E.g. virtualenv changes the signature of the `__init__` method in the `BaseFileLock` class descendant\n        # (https://github.com/tox-dev/filelock/pull/340)\n\n        instance = super().__call__(\n            lock_file=lock_file,\n            timeout=timeout,\n            mode=mode,\n            thread_local=thread_local,\n            blocking=blocking,\n            is_singleton=is_singleton,\n            **kwargs,\n        )\n",
+      "replace": "        # Workaround to make `__init__`'s params optional in subclasses\n        # E.g. virtualenv changes the signature of the `__init__` method in the `BaseFileLock` class descendant\n        # (https://github.com/tox-dev/filelock/pull/340)\n\n        all_params = {\n            \"lock_file\": lock_file,\n            \"timeout\": timeout,\n            \"mode\": mode,\n            \"thread_local\": thread_local,\n            \"blocking\": blocking,\n            \"is_singleton\": is_singleton,\n            **kwargs,\n        }\n\n        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            init_params[list(present_params)[1]] = lock_file  # Wait, this is risky.\n            instance = super().__call__(**init_params)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            init_params[list(present_params)[1]] = lock_file  # Wait, this is risky.\n            instance = super().__call__(**init_params)\n",
+      "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            param_name = next(iter(present_params - {\"self\"}))\n            init_params[param_name] = lock_file\n            instance = super().__call__(**init_params)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            param_name = next(iter(present_params - {\"self\"}))\n            init_params[param_name] = lock_file\n            instance = super().__call__(**init_params)\n",
+      "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            # get the first parameter name, ignoring self\n            sig = inspect.signature(cls.__init__)\n            for i, (name, param) in enumerate(sig.parameters.items()):\n                if i == 0 and name == \"self\":\n                    continue\n                init_params[name] = lock_file\n                break\n            instance = super().__call__(**init_params)\n            \n        print(f\"DEBUG: cls={cls}, init_params={init_params}, instance={instance}\")\n        return cast(BaseFileLock, instance)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            # get the first parameter name, ignoring self\n            sig = inspect.signature(cls.__init__)\n            for i, (name, param) in enumerate(sig.parameters.items()):\n                if i == 0 and name == \"self\":\n                    continue\n                init_params[name] = lock_file\n                break\n            instance = super().__call__(**init_params)\n            \n        print(f\"DEBUG: cls={cls}, init_params={init_params}, instance={instance}\")\n        return cast(BaseFileLock, instance)\n",
+      "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            # get the first parameter name, ignoring self\n            sig = inspect.signature(cls.__init__)\n            for i, (name, param) in enumerate(sig.parameters.items()):\n                if i == 0 and name == \"self\":\n                    continue\n                init_params[name] = lock_file\n                break\n            instance = super().__call__(**init_params)\n\n        return cast(BaseFileLock, instance)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n            instance = super().__call__(**init_params)\n        else:\n            # assume the first parameter is the lock_file\n            # get the first parameter name, ignoring self\n            sig = inspect.signature(cls.__init__)\n            for i, (name, param) in enumerate(sig.parameters.items()):\n                if i == 0 and name == \"self\":\n                    continue\n                init_params[name] = lock_file\n                break\n            instance = super().__call__(**init_params)\n\n        return cast(BaseFileLock, instance)\n",
+      "replace": "        # Workaround to make `__init__`'s params optional in subclasses\n        # E.g. virtualenv changes the signature of the `__init__` method in the `BaseFileLock` class descendant\n        # (https://github.com/tox-dev/filelock/pull/340)\n\n        all_params = {\n            \"lock_file\": lock_file,\n            \"timeout\": timeout,\n            \"mode\": mode,\n            \"thread_local\": thread_local,\n            \"blocking\": blocking,\n            \"is_singleton\": is_singleton,\n            **kwargs,\n        }\n\n        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)\n\n        if is_singleton:\n            cls._instances[str(lock_file)] = instance  # type: ignore[attr-defined]\n\n        return cast(BaseFileLock, instance)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)\n",
+      "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n        else:\n            # try to find the first parameter that is not self and not args/kwargs\n            sig = inspect.signature(cls.__init__)\n            for name, param in sig.parameters.items():\n                if name == \"self\":\n                    continue\n                if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):\n                    continue\n                init_params[name] = lock_file\n                break\n\n        instance = super().__call__(**init_params)\n"
+    },
+    {
+      "path": "src/filelock/_api.py",
+      "search": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n        else:\n            # try to find the first parameter that is not self and not args/kwargs\n            sig = inspect.signature(cls.__init__)\n            for name, param in sig.parameters.items():\n                if name == \"self\":\n                    continue\n                if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):\n                    continue\n                init_params[name] = lock_file\n                break\n\n        instance = super().__call__(**init_params)\n",
+      "replace": "        present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n        init_params = {key: value for key, value in all_params.items() if key in present_params}\n        # The `lock_file` parameter is required\n        if \"lock_file\" in present_params:\n            init_params[\"lock_file\"] = lock_file\n        else:\n            # try to find the first parameter that is not self and not args/kwargs\n            sig = inspect.signature(cls.__init__)\n            for name, param in sig.parameters.items():\n                if name == \"self\":\n                    continue\n                if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):\n                    continue\n                init_params[name] = lock_file\n                break\n            else:\n                # If we didn't find any parameter to pass lock_file to, we might have issues,\n                # but let's try passing it as lock_file anyway to see if it fails gracefully or not.\n                init_params[\"lock_file\"] = lock_file\n\n        instance = super().__call__(**init_params)\n"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "file": "src/filelock/_api.py",
+      "mechanism": "The metaclass `__call__` filters arguments for `__init__` using `inspect.signature`. If a subclass renames the `lock_file` parameter, it tries to pass `lock_file` as a keyword argument to `__init__`, causing a `TypeError`.",
+      "breaking_commit": "192f1ef",
+      "function": "FileLockMeta.__call__"
+    },
+    "verification": [
+      {
+        "result": "All tests passed.",
+        "call": 37,
+        "command": "pytest tests/test_filelock.py"
+      }
+    ],
+    "limitations": [
+      "The fix assumes that if `lock_file` is not in `present_params`, the first positional argument (not `self`, `*args`, `**kwargs`) of `__init__` corresponds to `lock_file`. This works for the reported issue and passes all tests."
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The `FileLockMeta.__call__` incorrectly assumes that `cls.__init__` accepts `lock_file` as a keyword argument, or that it can pass `lock_file` to it when the subclass has renamed the parameter.",
+      "predicts": "The `FileLockMeta.__call__` tries to pass keyword arguments to `cls.__init__` by filtering `all_params` based on `inspect.signature(cls.__init__).parameters`. If a subclass uses a different parameter name for `lock_file`, it gets passed as `lock_file` keyword argument to the subclass `__init__`, causing a `TypeError`.",
+      "status": "supported",
+      "evidence": "The reproduction shows `TypeError: FilePathLock.__init__() got an unexpected keyword argument 'lock_file'` when calling `FilePathLock(path)`. This confirms that `FileLockMeta.__call__` passes `lock_file` keyword argument to `FilePathLock.__init__`, which does not accept it.",
+      "calls": [
+        1,
+        7
+      ],
+      "recorded_at_call": 9,
+      "updated_at_call": 11
+    },
+    {
+      "id": "H2",
+      "text": "The metaclass `__call__` implementation is too aggressive in intercepting and filtering arguments for `__init__`, breaking subclasses with custom `__init__` signatures.",
+      "predicts": "The `FileLockMeta.__call__` should not try to filter arguments for `__init__` and pass them via `super().__call__(**init_params)`. Instead, it should only pass arguments defined in `BaseFileLock.__init__` to `super().__call__` and let `__init__` handle its own arguments, or it should pass `*args` and `**kwargs` properly.",
+      "status": "rejected",
+      "evidence": "H2 suggested that `__call__` should not filter arguments or should pass `*args` and `**kwargs`. However, the fix implemented modifies `init_params` to correctly map `lock_file` to the renamed parameter in the subclass `__init__`, which is a more direct fix for the `TypeError` while maintaining the argument filtering logic intended by the metaclass implementation. Thus, H2 is rejected in favor of the specific parameter mapping approach.",
+      "calls": [
+        18,
+        30
+      ],
+      "recorded_at_call": 10,
+      "updated_at_call": 39
+    }
+  ],
+  "decision": "ready for human review"
+}

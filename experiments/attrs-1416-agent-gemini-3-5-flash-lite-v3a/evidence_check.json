@@ -1,0 +1,79 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": false,
+  "counts": {
+    "verified": 10,
+    "unverifiable": 1,
+    "contradicted": 0
+  },
+  "total": 11,
+  "verified_fraction": 0.909,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 13 is run_python with output",
+      "ref": "H1 -> call 13"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 13 is run_python with output",
+      "ref": "H2 -> call 13"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 20 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 13"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 21 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 20"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`AttrsClass(attrs)` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`_transform_attrs` appears in the transcript",
+      "ref": "H1.text"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`field_transformer` appears in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "quote",
+      "status": "unverifiable",
+      "detail": "`AttrsClass(...)` appears nowhere in the transcript",
+      "ref": "H2.text"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/attr/_make.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

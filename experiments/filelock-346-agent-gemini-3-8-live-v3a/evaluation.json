@@ -1,0 +1,148 @@
+{
+  "protocol": "agent run, scored by tools/agent/score.py (same evaluator as the edit-format baseline)",
+  "case_id": "filelock-346",
+  "model": "gemini-3.8-live",
+  "repair": {
+    "outcome": "success",
+    "reproduce_exit_code": 0,
+    "pytest_tail": [
+      "104 passed, 3 skipped, 1076 warnings in 54.42s"
+    ],
+    "applied_diff": "diff --git a/src/filelock/_api.py b/src/filelock/_api.py\nindex 7db0e01..471ecbe 100644\n--- a/src/filelock/_api.py\n+++ b/src/filelock/_api.py\n@@ -129,10 +129,39 @@ class FileLockMeta(ABCMeta):\n             **kwargs,\n         }\n \n+        # Workaround to make `__init__`'s params optional in subclasses\n+        # E.g. virtualenv changes the signature of the `__init__` method in the `BaseFileLock` class descendant\n+        # (https://github.com/tox-dev/filelock/pull/340)\n+\n+        all_params = {\n+            \"lock_file\": lock_file,\n+            \"timeout\": timeout,\n+            \"mode\": mode,\n+            \"thread_local\": thread_local,\n+            \"blocking\": blocking,\n+            \"is_singleton\": is_singleton,\n+            **kwargs,\n+        }\n+\n         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]\n         init_params = {key: value for key, value in all_params.items() if key in present_params}\n         # The `lock_file` parameter is required\n-        init_params[\"lock_file\"] = lock_file\n+        if \"lock_file\" in present_params:\n+            init_params[\"lock_file\"] = lock_file\n+        else:\n+            # try to find the first parameter that is not self and not args/kwargs\n+            sig = inspect.signature(cls.__init__)\n+            for name, param in sig.parameters.items():\n+                if name == \"self\":\n+                    continue\n+                if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):\n+                    continue\n+                init_params[name] = lock_file\n+                break\n+            else:\n+                # If we didn't find any parameter to pass lock_file to, we might have issues,\n+                # but let's try passing it as lock_file anyway to see if it fails gracefully or not.\n+                init_params[\"lock_file\"] = lock_file\n \n         instance = super().__call__(**init_params)\n \n"
+  },
+  "root_cause": {
+    "status": "match",
+    "commit_match": true,
+    "file_match": true,
+    "function_match": true,
+    "fix_files": [
+      "src/filelock/_api.py"
+    ],
+    "claimed": {
+      "file": "src/filelock/_api.py",
+      "function": "FileLockMeta.__call__",
+      "breaking_commit": "192f1ef"
+    },
+    "needs_human_review": false
+  },
+  "evidence": {
+    "checker_commit": "a7f25b9",
+    "passed": false,
+    "counts": {
+      "verified": 14,
+      "unverifiable": 2,
+      "contradicted": 0
+    },
+    "total": 16,
+    "verified_fraction": 0.875,
+    "items": [
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 1 is run_python with output",
+        "ref": "H1 -> call 1"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 7 is read_file with output",
+        "ref": "H1 -> call 7"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 18 is git_show with output",
+        "ref": "H2 -> call 18"
+      },
+      {
+        "kind": "hypothesis_call",
+        "status": "verified",
+        "detail": "call 30 is run_tests with output",
+        "ref": "H2 -> call 30"
+      },
+      {
+        "kind": "verification",
+        "status": "verified",
+        "detail": "call 37 ran after the last edit and the claim agrees with the output",
+        "ref": "verification[0] -> call 30"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`inspect.signature` appears in the transcript",
+        "ref": "root_cause.mechanism"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`TypeError: FilePathLock.__init__() got an unexpected keyword` appears in the transcript",
+        "ref": "H1.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`FilePathLock(path)` appears in the transcript",
+        "ref": "H1.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+        "ref": "H1.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`FilePathLock.__init__` appears in the transcript",
+        "ref": "H1.evidence"
+      },
+      {
+        "kind": "quote",
+        "status": "unverifiable",
+        "detail": "`FileLockMeta.__call__` appears nowhere in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "quote",
+        "status": "verified",
+        "detail": "`cls.__init__` appears in the transcript",
+        "ref": "H1.text"
+      },
+      {
+        "kind": "commit",
+        "status": "verified",
+        "detail": "192f1ef appears in a git output",
+        "ref": "root_cause.breaking_commit"
+      },
+      {
+        "kind": "root_cause_file",
+        "status": "verified",
+        "detail": "src/filelock/_api.py was opened or searched",
+        "ref": "root_cause.file"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report edits equal the successful apply_edit calls",
+        "ref": "patch.edits"
+      },
+      {
+        "kind": "patch",
+        "status": "verified",
+        "detail": "report diff equals the saved workspace diff",
+        "ref": "patch.diff"
+      }
+    ]
+  },
+  "cost": {
+    "tool_calls": 40,
+    "model_calls": 40,
+    "total_tokens": 613483,
+    "seconds": 566.1,
+    "active_seconds": 91.4,
+    "waited_seconds": 474.7,
+    "models_used": {
+      "gemini-3.8-live": 40
+    }
+  }
+}

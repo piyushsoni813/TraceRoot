@@ -1,0 +1,90 @@
+{
+  "case_id": "attrs-1416",
+  "model": "gemini-3.5-flash-lite",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 22,
+    "seconds": 95.0,
+    "total_tokens": 208267
+  },
+  "root_cause": {
+    "mechanism": "When a field_transformer returned an iterator or generator (which is single-pass), attrs iterated over it multiple times for order validation, alias resolution, and constructing AttrsClass, exhausting the iterator/generator on the first iteration. Converting the result of field_transformer to a list ensures that it can be iterated multiple times safely.",
+    "file": "src/attr/_make.py",
+    "function": "_transform_attrs"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The field_transformer function in the user code returns a generator (from `yield`), but `AttrsClass(attrs)` or `_transform_attrs` expects a list or sequence (or `attrs` is used multiple times / exhausted if it's an iterator/generator).",
+      "predicts": "If generator function is exhausted when `AttrsClass(attrs)` is called or when fields are iterated, or if `field_transformer` modifies/returns an iterator instead of a list, `attrs` becomes empty or doesn't work as expected.",
+      "status": "supported",
+      "evidence": "Wrapping generator return value with list(...) in field_transformer makes Base attrs and Subclass attrs populate correctly and instantiation succeed.",
+      "calls": [
+        13
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "`field_transformer` can return any iterable (including a generator), but attrs code expects a collection/list and might iterate over it multiple times or pass a generator object directly to `AttrsClass(...)` or check operations on it.",
+      "predicts": "Converting `field_transformer` return value to list via `list(field_transformer(...))` or handling iterables/iterators robustly fixes the issue when `field_transformer` returns a generator.",
+      "status": "supported",
+      "evidence": "When field_transformer returns a generator (which is an iterable but single-pass), attrs uses it multiple times (e.g. for order check, alias resolution, and AttrsClass(attrs)), exhausting it on the first use. Converting attrs to list (or list(field_transformer(...))) ensures it can be iterated multiple times.",
+      "calls": [
+        13
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 13,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=lambda c, f: list(_all_after_dag_id_to_kw_only(c, f)))\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\nprint(\"Base attrs:\", Base.__attrs_attrs__)\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(\"Subclass attrs:\", Subclass.__attrs_attrs__)\nx = Subclass(dag_id=\"foo\", other=False)\nprint(repr(x))\n"
+      },
+      "excerpt": "[exit 0]\nBase attrs: (Attribute(name='dag_id', default=NOTHING, validator=None, repr=True, eq=True, eq_key=None, order=True, order_key=None, hash=None, init=True, metadata=mappingproxy({}), type=<class 'str'>, converter=None, kw_only=False, inherited=False, on_setattr=None, alias='dag_id'), Attribute(name='has_default', default='default', validator=None, repr=True, eq=True, eq_key=None, order=True"
+    },
+    {
+      "call": 20,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nx = Subclass(dag_id=\"foo\", other=False)\nprint(repr(x))\nassert repr(x) == \"Subclass(dag_id='foo', has_default='default', other=False)\"\nprint(\"Success!\")\n"
+      },
+      "excerpt": "[exit 0]\nSubclass(dag_id='foo', has_default='default', other=False)\nSuccess!\n"
+    },
+    {
+      "call": 21,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_hooks.py",
+          "tests/test_make.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [ 26%]\n........................................................................ [ 52%]\n........................................................................ [ 78%]\n....................................................s.......             [100%]\n=========================== short test summary info ==================="
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/attr/_make.py",
+        "search": "    if field_transformer is not None:\n        attrs = field_transformer(cls, attrs)",
+        "replace": "    if field_transformer is not None:\n        attrs = list(field_transformer(cls, attrs))"
+      }
+    ],
+    "diff": "diff --git a/src/attr/_make.py b/src/attr/_make.py\nindex 7439dc2..41bc412 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -448,7 +448,7 @@ def _transform_attrs(\n     attrs = base_attrs + own_attrs\n \n     if field_transformer is not None:\n-        attrs = field_transformer(cls, attrs)\n+        attrs = list(field_transformer(cls, attrs))\n \n     # Check attr order after executing the field_transformer.\n     # Mandatory vs non-mandatory attr order only matters when they are part of\n"
+  },
+  "verification": [
+    {
+      "call": 20,
+      "result": "Subclass(dag_id='foo', has_default='default', other=False)\\nSuccess!",
+      "command": "python script with reproducer"
+    },
+    {
+      "result": "275 passed, 1 skipped in 4.82s",
+      "call": 21,
+      "command": "pytest tests/test_hooks.py tests/test_make.py"
+    }
+  ],
+  "limitations": [],
+  "decision": "ready for human review"
+}

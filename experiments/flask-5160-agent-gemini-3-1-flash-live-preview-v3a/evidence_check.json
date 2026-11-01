@@ -1,0 +1,109 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": true,
+  "counts": {
+    "verified": 16,
+    "unverifiable": 0,
+    "contradicted": 0
+  },
+  "total": 16,
+  "verified_fraction": 1.0,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H1 -> call 11"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 12 is run_python with output",
+      "ref": "H1 -> call 12"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H2 -> call 11"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 12 is run_python with output",
+      "ref": "H2 -> call 12"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 16 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 12"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 19 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 16"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`pkgutil.get_loader(root_mod_name)` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(root_mod_name)` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`root_mod_name` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`__main__.__spec__` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`importlib.util.find_spec(\"__main__\")` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "quote",
+      "status": "verified",
+      "detail": "`pkgutil.get_loader` appears in the transcript",
+      "ref": "root_cause.mechanism"
+    },
+    {
+      "kind": "commit",
+      "status": "verified",
+      "detail": "84e11a1e827c0f55f9b9ee15952eddcf8a6492e0 appears in a git output",
+      "ref": "root_cause.breaking_commit"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/flask/scaffold.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

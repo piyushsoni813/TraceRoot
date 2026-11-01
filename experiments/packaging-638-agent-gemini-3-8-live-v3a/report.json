@@ -1,0 +1,99 @@
+{
+  "case_id": "packaging-638",
+  "model": "gemini-3.8-live",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 21,
+    "seconds": 108.5,
+    "total_tokens": 107388
+  },
+  "root_cause": {
+    "file": "src/packaging/markers.py",
+    "mechanism": "The _normalize function attempted to canonicalize the 'extra' marker value using canonicalize_name without checking if the value was None. When a user evaluated a marker with 'extra' set to None, a TypeError was raised.",
+    "breaking_commit": "",
+    "function": "_normalize"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The function _normalize attempts to canonicalize values without checking if they are None. When extra is None, it passes None to canonicalize_name, causing a TypeError.",
+      "predicts": "If we modify _normalize to return None (or handle it gracefully) when the value is None, the TypeError will be resolved and the marker evaluation will correctly return False.",
+      "status": "supported",
+      "evidence": "canonicalize_name(None) raises TypeError, which causes evaluate() to fail when extra is None.",
+      "calls": [
+        7,
+        11
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The evaluation logic in _evaluate_markers should not normalize values if they are None, as None indicates the absence of an extra.",
+      "predicts": "If we modify _evaluate_markers to skip normalization or handle None before calling _normalize, the TypeError will be avoided.",
+      "status": "rejected",
+      "evidence": "The TypeError is raised inside _normalize because it calls canonicalize_name with None.",
+      "calls": [
+        11
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 7,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.utils import canonicalize_name\ntry:\n    canonicalize_name(None)\nexcept Exception as e:\n    print(f\"canonicalize_name(None) raises {type(e).__name__}\")\n"
+      },
+      "excerpt": "[exit 0]\ncanonicalize_name(None) raises TypeError\n"
+    },
+    {
+      "call": 11,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.markers import Marker\nmarker = Marker('extra == \"opt-feature\"')\ntry:\n    marker.evaluate({\"extra\": None})\n    print(\"No error\")\nexcept Exception as e:\n    print(f\"Error: {type(e).__name__}: {e}\")\n"
+      },
+      "excerpt": "[exit 0]\nError: TypeError: expected string or bytes-like object, got 'NoneType'\n"
+    },
+    {
+      "call": 17,
+      "tool": "run_python",
+      "args": {
+        "code": "from packaging.markers import Marker\nmarker = Marker('extra == \"opt-feature\"')\ntry:\n    print(f\"Result: {marker.evaluate({'extra': None})}\")\nexcept Exception as e:\n    import traceback\n    traceback.print_exc()\n"
+      },
+      "excerpt": "[exit 0]\nResult: False\n"
+    },
+    {
+      "call": 20,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests/test_markers.py"
+        ]
+      },
+      "excerpt": "[exit 0]\n........................................................................ [  3%]\n........................................................................ [  6%]\n........................................................................ [  9%]\n........................................................................ [ 12%]\n......................................................................."
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/packaging/markers.py",
+        "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)",
+        "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)"
+      }
+    ],
+    "diff": "diff --git a/src/packaging/markers.py b/src/packaging/markers.py\nindex a5bf35c..8c91548 100644\n--- a/src/packaging/markers.py\n+++ b/src/packaging/markers.py\n@@ -121,7 +121,7 @@ def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n     # > When comparing extra names, tools MUST normalize the names being\n     # > compared using the semantics outlined in PEP 503 for names\n     if key == \"extra\":\n-        return tuple(canonicalize_name(v) for v in values)\n+        return tuple(canonicalize_name(v) if v is not None else v for v in values)\n \n     # other environment markers don't have such standards\n     return values\n"
+  },
+  "verification": [
+    {
+      "result": "Result: False",
+      "call": 17,
+      "command": "python -c \"...\""
+    },
+    {
+      "result": "2221 passed in 4.09s",
+      "command": "pytest tests/test_markers.py",
+      "call": 20
+    }
+  ],
+  "limitations": [],
+  "decision": "ready for human review"
+}

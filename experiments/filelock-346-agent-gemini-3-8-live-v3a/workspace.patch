@@ -1,0 +1,45 @@
+diff --git a/src/filelock/_api.py b/src/filelock/_api.py
+index 7db0e01..471ecbe 100644
+--- a/src/filelock/_api.py
++++ b/src/filelock/_api.py
+@@ -129,10 +129,39 @@ class FileLockMeta(ABCMeta):
+             **kwargs,
+         }
+ 
++        # Workaround to make `__init__`'s params optional in subclasses
++        # E.g. virtualenv changes the signature of the `__init__` method in the `BaseFileLock` class descendant
++        # (https://github.com/tox-dev/filelock/pull/340)
++
++        all_params = {
++            "lock_file": lock_file,
++            "timeout": timeout,
++            "mode": mode,
++            "thread_local": thread_local,
++            "blocking": blocking,
++            "is_singleton": is_singleton,
++            **kwargs,
++        }
++
+         present_params = set(inspect.signature(cls.__init__).parameters)  # type: ignore[misc]
+         init_params = {key: value for key, value in all_params.items() if key in present_params}
+         # The `lock_file` parameter is required
+-        init_params["lock_file"] = lock_file
++        if "lock_file" in present_params:
++            init_params["lock_file"] = lock_file
++        else:
++            # try to find the first parameter that is not self and not args/kwargs
++            sig = inspect.signature(cls.__init__)
++            for name, param in sig.parameters.items():
++                if name == "self":
++                    continue
++                if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
++                    continue
++                init_params[name] = lock_file
++                break
++            else:
++                # If we didn't find any parameter to pass lock_file to, we might have issues,
++                # but let's try passing it as lock_file anyway to see if it fails gracefully or not.
++                init_params["lock_file"] = lock_file
+ 
+         instance = super().__call__(**init_params)
+ 

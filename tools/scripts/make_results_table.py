@@ -82,11 +82,19 @@ union = sum(1 for c in CASES if solved_by_case[c])
 DRIVERS_V2 = [d for d in DRIVERS if not d[1].startswith("gemini-3-8-flash+")]
 table_v2, solved_v2 = build(DRIVERS_V2, "v2?")
 union_v2 = sum(1 for c in CASES if solved_v2[c])
+DRIVERS_V3 = [d for d in DRIVERS_V2 if d[1] != "gemini-3-1-flash-lite"]  # 3.1 Flash Lite waits for the 503 storms to pass
+table_v3, solved_v3 = build(DRIVERS_V3, "v3?")
+union_v3 = sum(1 for c in CASES if solved_v3[c])
+contradicted = lambda pat: sum(json.load(open(f))["counts"]["contradicted"]
+                               for f in glob.glob(f"{ROOT}/experiments/*-agent-*-{pat}/evidence_check.json")
+                               if "gemini-3-1-flash-lite-" not in f)
 checkers = sorted({json.load(open(f)).get("checker_commit", "?") for f in glob.glob(f"{ROOT}/experiments/*-agent-*/evidence_check.json")})
 print(table)
 print("cases solved by at least one driver:", union)
 print(table_v2)
 print("v2 cases solved by at least one driver:", union_v2)
+print(table_v3)
+print("v3 cases solved by at least one driver:", union_v3, "contradicted v2/v3:", contradicted("v2?"), contradicted("v3?"))
 
 section = f"""## Investigator agent results (separate from the baseline tables above)
 
@@ -136,6 +144,28 @@ Notes on v2:
   waiting); these three cells need a rerun before v2 can be judged on this driver.
 - Two v2 reports have a `contradicted` verification: Gemini 3.5 Flash Lite cited call numbers one off from the output it
   quoted (for example it quoted the result of call 28 under call 31).
+
+### Protocol v3 (thrash guard counts run_python, call number first)
+
+v2 plus two changes: the thrash guard also counts failing `run_python` checks after an edit, and every tool result sent to
+the model starts with "[call N]" (the transcript keeps the bare result). Run folders end in `-v3a`, reruns in `-v3b`.
+2026-11-01. Gemini 3.1 Flash Lite is not in this round yet: its v2 rerun on 2026-11-01 hit HTTP 503 on every retry.
+
+{table_v3}
+
+Cases solved by at least one v3 driver: {union_v3} of 5. Contradicted evidence items, same three drivers: v2 {contradicted("v2?")}, v3 {contradicted("v3?")}.
+
+Notes on v3:
+- Solve counts did not improve: Gemini 3.1 Flash Live 4 of 5 (v2 5 of 5), Gemini 3.5 Flash Lite 4 of 5 (same cells as v2),
+  Gemini 3.8 Live 2 of 5 (it gained filelock and lost flask). No v3 driver solved click; in v2 only Gemini 3.1 Flash Live did.
+- Gemini 3.1 Flash Live click `a` stopped before its first call when the Live connection closed (WebSocket 1008, a service
+  error); `b` reran it and used all 40 calls.
+- The new thrash guard fired once, on Gemini 3.8 Live filelock at call 25. The model kept editing anyway and passed the tests
+  on its last edit (the run used all 40 calls, with submit as the last). It did not update its hypotheses after the warning.
+- No v3 report has a `contradicted` evidence item (v2, same drivers: see the count above). This fits the "[call N]" change, but
+  the number of runs is small.
+- One attempt per cell. A loss or gain of one case is within run-to-run noise, so v3 is not better or worse at solving on this
+  evidence; its clear effect so far is on citations.
 
 Limits of these results:
 - Five public bugs, one counted attempt per cell. Indicative only; the models may have seen these fixes in training.

@@ -156,6 +156,10 @@ results, limitations) for human review. No automatic merge or deploy.
 - Protocol v3 implemented (2026-11-01, default; variant suffix `v3a`): the thrash guard also counts failing `run_python`
   checks after an edit, and every tool result sent to the model starts with "[call N]". The transcript keeps the bare
   result, so the evidence checker is unchanged. v2 and v1 behave as before with `--protocol=v2|v1`.
+- Protocol v3 round (2026-11-01): 3.1 Flash Live 4/5 (v2 5/5, lost click), 3.5 Flash Lite 4/5 (same), 3.8 Live 2/5 (gained
+  filelock, lost flask). Contradicted evidence items 2 in v2 vs 0 in v3 (same three drivers). The new thrash guard fired once
+  (3.8 Live filelock, call 25) and the model kept editing. Solve rate: no clear change; citations: better. Table in README.
+- Still to do: 3.1 Flash Lite under v2 (variant `v2b`) and v3 when the 503 storms end.
 - Parked for later: discussion of a multi-agent design (planner, reviewer) on top of the single investigator agent.
 - Next, in order: (2) root cause review sheet for a person to confirm likely/partial, (3) analyse where the 40 calls go in
   budget_exhausted runs, (4) test improvements as protocol v2 against frozen v1, (5) new cases fixed after model training cutoffs. (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt

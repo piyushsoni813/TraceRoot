@@ -1,0 +1,61 @@
+{
+  "checker_commit": "a7f25b9",
+  "passed": true,
+  "counts": {
+    "verified": 8,
+    "unverifiable": 0,
+    "contradicted": 0
+  },
+  "total": 8,
+  "verified_fraction": 1.0,
+  "items": [
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 7 is run_python with output",
+      "ref": "H1 -> call 7"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H1 -> call 11"
+    },
+    {
+      "kind": "hypothesis_call",
+      "status": "verified",
+      "detail": "call 11 is run_python with output",
+      "ref": "H2 -> call 11"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 17 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[0] -> call 11"
+    },
+    {
+      "kind": "verification",
+      "status": "verified",
+      "detail": "call 20 ran after the last edit and the claim agrees with the output",
+      "ref": "verification[1] -> call 17"
+    },
+    {
+      "kind": "root_cause_file",
+      "status": "verified",
+      "detail": "src/packaging/markers.py was opened or searched",
+      "ref": "root_cause.file"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report edits equal the successful apply_edit calls",
+      "ref": "patch.edits"
+    },
+    {
+      "kind": "patch",
+      "status": "verified",
+      "detail": "report diff equals the saved workspace diff",
+      "ref": "patch.diff"
+    }
+  ]
+}

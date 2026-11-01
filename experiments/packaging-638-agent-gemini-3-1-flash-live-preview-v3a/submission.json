@@ -1,0 +1,61 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n    # PEP 685 \u2013 Comparison of extra names for optional distribution dependencies\n    # https://peps.python.org/pep-0685/\n    # > When comparing extra names, tools MUST normalize the names being\n    # > compared using the semantics outlined in PEP 503 for names\n    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)\n\n    # other environment markers don't have such standards\n    return values\n",
+      "replace": "def _normalize(*values: str, key: str) -> Tuple[str, ...]:\n    # PEP 685 \u2013 Comparison of extra names for optional distribution dependencies\n    # https://peps.python.org/pep-0685/\n    # > When comparing extra names, tools MUST normalize the names being\n    # > compared using the semantics outlined in PEP 503 for names\n    if key == \"extra\":\n        return tuple(canonicalize_name(v if v is not None else \"\") for v in values)\n\n    # other environment markers don't have such standards\n    return values\n"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "file": "src/packaging/markers.py",
+      "function": "_normalize",
+      "mechanism": "The `_normalize` function, introduced to adhere to PEP 685, calls `canonicalize_name` on values when the environment key is \"extra\". However, it failed to account for the fact that `extra` can be passed as `None` in the environment, causing `canonicalize_name` (which expects a string) to raise a `TypeError`."
+    },
+    "limitations": [],
+    "verification": [
+      {
+        "result": "False",
+        "command": "run_python reproduction script",
+        "call": 18
+      },
+      {
+        "result": "2221 passed",
+        "command": "run_tests tests/test_markers.py",
+        "call": 22
+      },
+      {
+        "result": "39 passed",
+        "call": 23,
+        "command": "run_tests tests/test_utils.py"
+      }
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The bug is caused by `_normalize` in `src/packaging/markers.py` calling `canonicalize_name` on `None` when `key == \"extra\"`. If I modify `_normalize` to handle `None` by converting it to an empty string, the error will be resolved.",
+      "predicts": "The reproduction script will pass and print False.",
+      "status": "supported",
+      "evidence": "The reproduction script now prints False instead of raising TypeError.",
+      "calls": [
+        18
+      ],
+      "recorded_at_call": 6,
+      "updated_at_call": 19
+    },
+    {
+      "id": "H2",
+      "text": "The bug is in `canonicalize_name` in `src/packaging/utils.py`, which should handle `None` input. If I modify `canonicalize_name` to handle `None`, the error will be resolved.",
+      "predicts": "The reproduction script will still fail with the same TypeError.",
+      "status": "rejected",
+      "evidence": "The fix in markers.py resolved the issue, so the fix in utils.py is not needed.",
+      "calls": [
+        18
+      ],
+      "recorded_at_call": 7,
+      "updated_at_call": 20
+    }
+  ],
+  "decision": "ready for human review"
+}

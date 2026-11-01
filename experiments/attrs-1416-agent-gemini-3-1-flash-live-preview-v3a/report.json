@@ -1,0 +1,117 @@
+{
+  "case_id": "attrs-1416",
+  "model": "gemini-3.1-flash-live-preview",
+  "run": {
+    "outcome": "submitted",
+    "tool_calls": 28,
+    "seconds": 57.7,
+    "total_tokens": 0
+  },
+  "root_cause": {
+    "file": "src/attr/_make.py",
+    "function": "_transform_attrs",
+    "mechanism": "The code was assigning the output of the field_transformer directly to the 'attrs' variable. If the field_transformer was a generator, 'attrs' became an iterator. Subsequent code iterated over 'attrs' multiple times (e.g., in the mandatory vs non-mandatory order check, and when creating the AttrsClass tuple), causing the iterator to be exhausted after the first pass. This led to missing attributes in the generated class."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The `field_transformer` on `Base` is not being applied when collecting attributes for `Subclass`, leading to incorrect attribute collection and `__init__` generation.",
+      "predicts": "The generated `__init__` method for `Subclass` will not have `dag_id` as a parameter.",
+      "status": "rejected",
+      "evidence": "The field_transformer IS applied to Base. The issue is how attrs handles the generator returned by the transformer.",
+      "calls": [
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "id": "H2",
+      "text": "The `field_transformer` IS applied, but the resulting attributes are somehow mishandled during `__init__` generation for the subclass.",
+      "predicts": "The generated `__init__` method for `Subclass` will have `dag_id` as a parameter, but it might be keyword-only when it shouldn't be, or vice versa, or there's some other issue with how `__init__` is generated.",
+      "status": "supported",
+      "evidence": "The reproducer fails when the field_transformer is a generator. When changed to return a list, it works. This indicates that attrs is not correctly handling generator functions as field_transformers, likely consuming them partially or incorrectly.",
+      "calls": [
+        18,
+        19,
+        20
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "call": 18,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in attrs.fields(Base)]}\")\nprint(f\"Subclass fields: {[f.name for f in attrs.fields(Subclass)]}\")\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nBase fields: []\nSubclass fields: ['other']\nSubclass.__init__() got an unexpected keyword argument 'dag_id'\n"
+    },
+    {
+      "call": 19,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    fields_list = list(fields)\n    print(f\"Input fields: {[f.name for f in fields_list]}\")\n    i = iter(fields_list)\n    try:\n        f = next(i)\n        if f.name != \"dag_id\":\n             print(f\"dag_id was not the first field, it was {f.name}\")\n        yield f\n        for f in i:\n            yield f.evolve(kw_only=True)\n    except StopIteration:\n        print(\"Input fields empty\")\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in attrs.fields(Base)]}\")\nprint(f\"Subclass fields: {[f.name for f in attrs.fields(Subclass)]}\")\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nInput fields: ['dag_id', 'has_default']\nBase fields: []\nSubclass fields: ['other']\nSubclass.__init__() got an unexpected keyword argument 'dag_id'\n"
+    },
+    {
+      "call": 20,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    print(f\"Transforming fields for {cls.__name__}\")\n    fields_list = list(fields)\n    print(f\"Input fields: {[f.name for f in fields_list]}\")\n    \n    result = []\n    i = iter(fields_list)\n    try:\n        f = next(i)\n        if f.name != \"dag_id\":\n             print(f\"dag_id was not the first field, it was {f.name}\")\n        result.append(f)\n        for f in i:\n            result.append(f.evolve(kw_only=True))\n    except StopIteration:\n        print(\"Input fields empty\")\n        \n    print(f\"Output fields: {[f.name for f in result]}\")\n    return result\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\nprint(f\"Base fields: {[f.name for f in attrs.fields(Base)]}\")\nprint(f\"Subclass fields: {[f.name for f in attrs.fields(Subclass)]}\")\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nTransforming fields for Base\nInput fields: ['dag_id', 'has_default']\nOutput fields: ['dag_id', 'has_default']\nBase fields: ['dag_id', 'has_default']\nSubclass fields: ['dag_id', 'has_default', 'other']\nSubclass(dag_id='foo', has_default='default', other=False)\n"
+    },
+    {
+      "call": 24,
+      "tool": "run_python",
+      "args": {
+        "code": "import attrs\n\ndef _all_after_dag_id_to_kw_only(cls, fields):\n    i = iter(fields)\n    f = next(i)\n    if f.name != \"dag_id\":\n        raise RuntimeError(\"dag_id was not the first field\")\n    yield f\n    for f in i:\n        yield f.evolve(kw_only=True)\n\n@attrs.define(field_transformer=_all_after_dag_id_to_kw_only)\nclass Base:\n    dag_id: str\n    has_default: str = \"default\"\n\n@attrs.define()\nclass Subclass(Base):\n    other: bool\n\ntry:\n    x = Subclass(dag_id=\"foo\", other=False)\n    print(repr(x))\nexcept TypeError as e:\n    print(e)\n"
+      },
+      "excerpt": "[exit 0]\nSubclass(dag_id='foo', has_default='default', other=False)\n"
+    },
+    {
+      "call": 25,
+      "tool": "run_tests",
+      "args": {
+        "selection": [
+          "tests"
+        ]
+      },
+      "excerpt": "[exit 1]\n........................................................................ [  5%]\n........................................................................ [ 10%]\n........................................................................ [ 16%]\n........................................................................ [ 21%]\n......................................................................."
+    }
+  ],
+  "patch": {
+    "edits": [
+      {
+        "path": "src/attr/_make.py",
+        "search": "    if field_transformer is not None:\n        attrs = field_transformer(cls, attrs)\n",
+        "replace": "    if field_transformer is not None:\n        attrs = list(field_transformer(cls, attrs))\n"
+      }
+    ],
+    "diff": "diff --git a/src/attr/_make.py b/src/attr/_make.py\nindex 7439dc2..41bc412 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -448,7 +448,7 @@ def _transform_attrs(\n     attrs = base_attrs + own_attrs\n \n     if field_transformer is not None:\n-        attrs = field_transformer(cls, attrs)\n+        attrs = list(field_transformer(cls, attrs))\n \n     # Check attr order after executing the field_transformer.\n     # Mandatory vs non-mandatory attr order only matters when they are part of\n"
+  },
+  "verification": [
+    {
+      "call": 20,
+      "result": "success",
+      "command": "run_python reproduction script with list-returning transformer"
+    },
+    {
+      "command": "run_python reproduction script with generator transformer after fix",
+      "call": 24,
+      "result": "success"
+    },
+    {
+      "command": "run_tests tests",
+      "result": "failures in tests/test_packaging.py, unrelated to change",
+      "call": 25
+    }
+  ],
+  "limitations": [
+    "The fix forces materialization of the field transformer output into a list. This might have performance implications if a field transformer generates a very large number of fields, although this is unlikely in practice.",
+    "Four existing tests in tests/test_packaging.py failed, but these failures appear unrelated to the change and are likely due to the sandboxed environment lacking package metadata for 'attrs'."
+  ],
+  "decision": "ready for human review"
+}

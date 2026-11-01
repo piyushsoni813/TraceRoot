@@ -1,0 +1,58 @@
+{
+  "edits": [
+    {
+      "path": "src/packaging/markers.py",
+      "search": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) for v in values)",
+      "replace": "    if key == \"extra\":\n        return tuple(canonicalize_name(v) if v is not None else v for v in values)"
+    }
+  ],
+  "report": {
+    "root_cause": {
+      "file": "src/packaging/markers.py",
+      "mechanism": "The _normalize function attempted to canonicalize the 'extra' marker value using canonicalize_name without checking if the value was None. When a user evaluated a marker with 'extra' set to None, a TypeError was raised.",
+      "breaking_commit": "",
+      "function": "_normalize"
+    },
+    "verification": [
+      {
+        "result": "Result: False",
+        "call": 17,
+        "command": "python -c \"...\""
+      },
+      {
+        "result": "2221 passed in 4.09s",
+        "command": "pytest tests/test_markers.py",
+        "call": 20
+      }
+    ],
+    "limitations": []
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "The function _normalize attempts to canonicalize values without checking if they are None. When extra is None, it passes None to canonicalize_name, causing a TypeError.",
+      "predicts": "If we modify _normalize to return None (or handle it gracefully) when the value is None, the TypeError will be resolved and the marker evaluation will correctly return False.",
+      "status": "supported",
+      "evidence": "canonicalize_name(None) raises TypeError, which causes evaluate() to fail when extra is None.",
+      "calls": [
+        7,
+        11
+      ],
+      "recorded_at_call": 5,
+      "updated_at_call": 12
+    },
+    {
+      "id": "H2",
+      "text": "The evaluation logic in _evaluate_markers should not normalize values if they are None, as None indicates the absence of an extra.",
+      "predicts": "If we modify _evaluate_markers to skip normalization or handle None before calling _normalize, the TypeError will be avoided.",
+      "status": "rejected",
+      "evidence": "The TypeError is raised inside _normalize because it calls canonicalize_name with None.",
+      "calls": [
+        11
+      ],
+      "recorded_at_call": 6,
+      "updated_at_call": 14
+    }
+  ],
+  "decision": "ready for human review"
+}
