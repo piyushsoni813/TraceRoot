@@ -111,6 +111,8 @@ check("rejects bool as integer", any("expected integer" in e for e in bad(lambda
 # 1c. protocol v2 guidance
 check("run.json records the protocol", json.load(open(f"{d_happy}/run.json"))["protocol"] == agent.PROTOCOL)
 check("an on-track run gets no guidance", not any(e["event"] == "guidance" for e in [json.loads(l) for l in open(f"{d_happy}/transcript.jsonl", encoding="utf-8")]))
+old_protocol = agent.PROTOCOL
+agent.PROTOCOL = "v2"
 explore = Scripted([response([fc("list_dir", path=".")])] * 30)
 d, res, ev = go("v2-checkpoints", explore, max_calls=26)
 g = [(e["kind"], e["at_call"]) for e in ev if e["event"] == "guidance"]
@@ -122,7 +124,20 @@ thrash = Scripted([r for i in range(1, 5) for r in (response([edit(i)]), respons
 d, res, ev = go("v2-thrash", thrash, max_calls=8)
 g = [(e["kind"], e["at_call"]) for e in ev if e["event"] == "guidance"]
 check("thrash guard fires after three failing edit/test cycles", g == [("thrash", 6)], g)
-old_protocol = agent.PROTOCOL
+# 1d. protocol v3: failing run_python checks count, and results lead with the call number
+pyfail = fc("run_python", code="raise SystemExit(1)")
+agent.PROTOCOL = "v3"
+thrash_py = Scripted([r for i in range(1, 5) for r in (response([edit(i)]), response([pyfail]))])
+d, res, ev = go("v3-thrash-python", thrash_py, max_calls=8)
+g = [(e["kind"], e["at_call"]) for e in ev if e["event"] == "guidance"]
+check("v3 thrash guard counts failing run_python checks", g == [("thrash", 6)], g)
+check("v3 thrash message names both check tools", "run_tests or run_python" in json.dumps(thrash_py.sent[6]))
+check("v3 tool result starts with the call number", '"result": "[call 1] ' in json.dumps(thrash_py.sent[1]) and '"result": "[call 2] ' in json.dumps(thrash_py.sent[2]))
+check("v3 transcript keeps the bare result", not ev[[e["event"] for e in ev].index("tool_call")]["result"].startswith("[call"))
+agent.PROTOCOL = "v2"
+d, res, ev = go("v2-thrash-python", Scripted([r for i in range(1, 5) for r in (response([edit(i)]), response([pyfail]))]), max_calls=8)
+check("v2 thrash guard ignores run_python", not any(e["event"] == "guidance" for e in ev))
+check("v2 tool result has no call prefix", "[call 1]" not in json.dumps(thrash.sent[1]))
 agent.PROTOCOL = "v1"
 d, res, ev = go("v1-none", Scripted([response([fc("list_dir", path=".")])] * 30), max_calls=26)
 check("protocol v1 gives no guidance", not any(e["event"] == "guidance" for e in ev) and json.load(open(f"{d}/run.json"))["protocol"] == "v1")

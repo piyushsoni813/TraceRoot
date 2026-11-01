@@ -1,6 +1,6 @@
 """Run the agent on several cases with one model, then score each run.
 
-usage: python -I run_batch.py <model> [variant] [case ...] [--key-env=NAME] [--protocol=v1|v2]
+usage: python -I run_batch.py <model> [variant] [case ...] [--key-env=NAME] [--protocol=v1|v2|v3]
 
 Run directories are experiments/<case>-agent-<model with dots as dashes>-<variant>. A directory that
 already exists is skipped, never overwritten. Each run and each scoring step is a separate process.

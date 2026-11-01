@@ -1,6 +1,6 @@
 """Investigator agent loop: Gemini function calling over the sandbox tools.
 
-usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N] [--protocol=v1|v2] [--key-env=NAME]
+usage: python -I agent.py <case_id> <run_dir> [model] [--max-calls=N] [--max-seconds=N] [--protocol=v1|v2|v3] [--key-env=NAME]
 
 model may be a comma separated chain (m1,m2,m3): when one model's daily quota ends the run continues on the next.
 A model name containing '-live' uses the Live API (WebSocket, audio-only models; only tool calls are used).
@@ -20,7 +20,9 @@ from tools import Toolset, SPECS, TOOLS_HASH
 import report as report_mod
 import evidence_check
 
-PROTOCOL = "v2"  # v1: round 1 behaviour; v2 adds the checkpoint guidance below (docs/budget-analysis.md)
+PROTOCOL = "v3"  # v1: round 1 behaviour; v2 adds the checkpoint guidance below (docs/budget-analysis.md);
+# v3 also counts failing run_python checks in the thrash guard and starts each tool result with "[call N]"
+PROTOCOLS = ("v1", "v2", "v3")
 HYP_CHECKPOINT, REPAIR_CHECKPOINT, THRASH_CYCLES = 15, 25, 3
 GUIDANCE = {
     "hypothesis": ("[guidance] {n} tool calls used and no hypothesis recorded yet. Record your competing hypotheses now "
@@ -29,6 +31,8 @@ GUIDANCE = {
                "smallest fix now with apply_edit, then run the tests."),
     "thrash": ("[guidance] Your last {k} edits were each followed by a failing test run. Stop editing. Read the failing "
                "test output carefully and update your hypotheses before the next edit."),
+    "thrash_v3": ("[guidance] Your last {k} edits were each followed by a failing check (run_tests or run_python). Stop "
+                  "editing. Read the failing output carefully and update your hypotheses before the next edit."),
 }
 KEY_ENV = "GEMINI_API_KEY"  # which variable holds the key; change with --key-env=NAME
 
@@ -545,8 +549,9 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
                     left = max_calls - ts.n_calls
                     mins = max(0, (max_seconds - active()) / 60)
                     notice = f"[tool call {ts.n_calls} of {max_calls} used, {left} left, {mins:.0f} min left]"
-                    if PROTOCOL == "v2":
-                        if fc["name"] == "run_tests" and result.startswith("[exit"):
+                    if PROTOCOL in ("v2", "v3"):
+                        checks = ("run_tests", "run_python") if PROTOCOL == "v3" else ("run_tests",)
+                        if fc["name"] in checks and result.startswith("[exit"):
                             if ts.last_edit_call > prev_tests:  # an edit happened since the previous test run
                                 fail_cycles = 0 if result.startswith("[exit 0]") else fail_cycles + 1
                             prev_tests = ts.n_calls
@@ -560,11 +565,14 @@ def run(case, run_dir, model, client_factory=make_client, max_calls=MAX_CALLS, m
                             fail_cycles = 0  # may fire again after three more failing cycles
                         for kind in due:
                             sent_guidance.add(kind)
-                            notice += "\n" + GUIDANCE[kind].format(n=ts.n_calls, k=THRASH_CYCLES)
+                            text = GUIDANCE["thrash_v3" if kind == "thrash" and PROTOCOL == "v3" else kind]
+                            notice += "\n" + text.format(n=ts.n_calls, k=THRASH_CYCLES)
                             log("guidance", kind=kind, at_call=ts.n_calls)
                     log("tool_call", n=ts.n_calls, name=fc["name"], args=fc.get("args"), result=result, notice=notice,
                         seconds=round(time.time() - t_call, 2))
-                    fr = {"name": fc["name"], "response": {"result": f"{result}\n{notice}"}}
+                    # v3: the call number leads the result, so a quote is cited with the call it came from
+                    head = f"[call {ts.n_calls}] " if PROTOCOL == "v3" else ""
+                    fr = {"name": fc["name"], "response": {"result": f"{head}{result}\n{notice}"}}
                     if fc.get("id"):
                         fr["id"] = fc["id"]
                     replies.append({"functionResponse": fr})
@@ -611,8 +619,8 @@ if __name__ == "__main__":
     load_env()
     KEY_ENV = opts.get("key-env", KEY_ENV)
     PROTOCOL = opts.get("protocol", PROTOCOL)
-    if PROTOCOL not in ("v1", "v2"):
-        raise SystemExit("--protocol must be v1 or v2")
+    if PROTOCOL not in PROTOCOLS:
+        raise SystemExit("--protocol must be one of " + ", ".join(PROTOCOLS))
     case, run_dir = pos[0], pos[1]
     model = pos[2] if len(pos) > 2 else "gemini-3.5-flash"
     print(json.dumps(run(case, run_dir, model, max_calls=int(opts.get("max-calls", MAX_CALLS)),

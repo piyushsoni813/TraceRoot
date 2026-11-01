@@ -150,6 +150,12 @@ results, limitations) for human review. No automatic merge or deploy.
 - v2 gaps found: the thrash guard ignores failing `run_python` checks after edits (3.8 Live filelock made 11 edits unguarded);
   models sometimes cite call numbers one off, likely because the call number appears only at the end of each result.
   Candidate v3: count run_python failures in the thrash guard; put "[call N]" at the start of every tool result.
+- 3.1 Flash Lite v2 rerun (2026-11-01, variant `v2b`): stopped after filelock hit 12 HTTP 503 replies in a row (27 min) and
+  packaging did the same. The timing fix worked (24 s active of 1663 s). Folders removed; retry later with
+  `--protocol=v2` (the default is now v3).
+- Protocol v3 implemented (2026-11-01, default; variant suffix `v3a`): the thrash guard also counts failing `run_python`
+  checks after an edit, and every tool result sent to the model starts with "[call N]". The transcript keeps the bare
+  result, so the evidence checker is unchanged. v2 and v1 behave as before with `--protocol=v2|v1`.
 - Parked for later: discussion of a multi-agent design (planner, reviewer) on top of the single investigator agent.
 - Next, in order: (2) root cause review sheet for a person to confirm likely/partial, (3) analyse where the 40 calls go in
   budget_exhausted runs, (4) test improvements as protocol v2 against frozen v1, (5) new cases fixed after model training cutoffs. (20 requests/day per model). Plan: one case per day, filelock-346 first. Optional prompt
