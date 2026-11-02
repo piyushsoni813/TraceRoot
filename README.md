@@ -79,6 +79,9 @@ Run the agent:
 # all five cases with one model, scored, skipping folders that already exist
 .venv\Scripts\python -I tools\agent\run_batch.py gemini-3.5-flash-lite a
 
+# same, but wait until a busy model (HTTP 503) answers again; see docs/RUN_CHECKLIST.md
+.venv\Scripts\python -I tools\agent\run_when_ready.py gemini-3.1-flash-lite v3a:v3 --wait-hours=2
+
 # rebuild the results table at the end of this README from the run folders
 .venv\Scripts\python -I tools\scripts\make_results_table.py
 ```
