@@ -171,3 +171,7 @@ results, limitations) for human review. No automatic merge or deploy.
 - One attempt per cell on five public bugs: results are indicative only; training-data exposure is possible.
 - Prompt example path `src/example/module.py` may have misled Qwen once; reword before the next round.
 - Cleanup done: deleted `hii.py`, `cases/flask-5160/reference-fixed/`, `.logs/`.
+- Process saved (2026-11-02): `tools/agent/run_when_ready.py` waits, probes a busy model with one tiny request, and starts
+  the given batches only when it answers HTTP 200. The 503 procedure is in `docs/RUN_CHECKLIST.md` (section C).
+- Next session, pick one: (1) human verdicts in `docs/root-cause-review.md` (now also has v2/v3 runs to add), (2) new cases
+  fixed after the models' training cutoffs, (3) multi-agent design discussion (parked). No run is in progress.
